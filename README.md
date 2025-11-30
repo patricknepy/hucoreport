@@ -229,6 +229,7 @@ pytest tests/ -v
 
 ### 📌 **À lire en premier**
 - [A_LIRE_EN_PREMIER.md](./A_LIRE_EN_PREMIER.md) - 🔴 **REPRISE DU CODE**
+- [CHANGELOG.md](./CHANGELOG.md) - 📝 **Historique des versions**
 
 ### Architecture & Contexte
 - [ARCHITECTURE.md](./docs/ARCHITECTURE.md) - Architecture détaillée
@@ -242,6 +243,7 @@ pytest tests/ -v
 
 ### Guides
 - [DEV_GUIDE.md](./docs/DEV_GUIDE.md) - Guide développeur
+- [GUIDE_GIT.md](./GUIDE_GIT.md) - 🔧 **Guide Git (Versioning)**
 - [GUIDE_DISTRIBUTION.md](./GUIDE_DISTRIBUTION.md) - 📦 Guide de distribution
 
 ---
