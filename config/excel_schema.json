@@ -1,0 +1,407 @@
+{
+  "version": "1.0",
+  "description": "Schéma de référence du fichier Excel Suivi Hebdo Projet GDP HUCO",
+  "header_row": 3,
+  "data_start_row": 4,
+  "data_end_row": 54,
+  "sheet_pattern": "^S\\d+$",
+  "columns": {
+    "A": {
+      "expected_name": "Number",
+      "db_field": "id_projet",
+      "type": "INTEGER",
+      "required": true,
+      "description": "Numéro du projet"
+    },
+    "B": {
+      "expected_name": "Statut Projet",
+      "db_field": "status",
+      "type": "TEXT",
+      "required": true,
+      "allowed_values": ["Actif", "Pause", "Non Actif", "À Venir", "EN COURS", "PAUSE", "TERMINÉ", ""],
+      "description": "Statut actuel du projet (normalisé automatiquement)"
+    },
+    "C": {
+      "expected_name": "BU",
+      "db_field": "bu",
+      "type": "TEXT",
+      "required": true,
+      "description": "Business Unit"
+    },
+    "D": {
+      "expected_name": "Client",
+      "db_field": "client_name",
+      "type": "TEXT",
+      "required": true,
+      "description": "Nom du client"
+    },
+    "E": {
+      "expected_name": "Description projet",
+      "db_field": "description",
+      "type": "TEXT",
+      "required": false,
+      "description": "Description du projet"
+    },
+    "F": {
+      "expected_name": "Priorité Entreprise",
+      "db_field": null,
+      "ignored": true,
+      "description": "Colonne ignorée (non importée en base)"
+    },
+    "G": {
+      "expected_name": "Chef de projet",
+      "db_field": "project_manager",
+      "type": "TEXT",
+      "required": false,
+      "description": "Nom du chef de projet"
+    },
+    "H": {
+      "expected_name": "Resp. Technique",
+      "db_field": "technical_lead",
+      "type": "TEXT",
+      "required": false,
+      "description": "Responsable technique"
+    },
+    "I": {
+      "expected_name": "Direction Projet",
+      "db_field": "project_director",
+      "type": "TEXT",
+      "required": false,
+      "description": "Direction projet"
+    },
+    "J": {
+      "expected_name": "Phase du projet",
+      "db_field": "project_phase",
+      "type": "TEXT",
+      "required": false,
+      "description": "Phase actuelle"
+    },
+    "K": {
+      "expected_name": "Type de contrat",
+      "db_field": "contract_type",
+      "type": "TEXT",
+      "required": false,
+      "description": "Type de contrat (forfait, régie, etc.)"
+    },
+    "L": {
+      "expected_name": "Code projet",
+      "db_field": "project_code",
+      "type": "TEXT",
+      "required": false,
+      "description": "Code projet interne"
+    },
+    "M": {
+      "expected_name": "Nombre de jours vendus (à garder, ici ?)",
+      "db_field": "days_sold",
+      "type": "INTEGER",
+      "required": false,
+      "normalize": true,
+      "description": "Nombre de jours vendus"
+    },
+    "N": {
+      "expected_name": "Relation Client Commer.",
+      "alternate_names": ["Relation Client\nCommer."],
+      "db_field": "nps_commercial",
+      "type": "INTEGER",
+      "required": false,
+      "min": -100,
+      "max": 100,
+      "normalize": true,
+      "description": "NPS Relation Client Commercial"
+    },
+    "O": {
+      "expected_name": "Relation Client Projet",
+      "alternate_names": ["Relation Client\nProjet"],
+      "db_field": "nps_project",
+      "type": "INTEGER",
+      "required": false,
+      "min": -100,
+      "max": 100,
+      "normalize": true,
+      "description": "NPS Relation Client Projet"
+    },
+    "P": {
+      "expected_name": "Vision Client",
+      "db_field": "vision_client",
+      "type": "TEXT",
+      "required": false,
+      "allowed_values": ["warning", "WARNING", "bon", "BON", "à améliorer", "non défini", ""],
+      "description": "Actualité/État vision client"
+    },
+    "Q": {
+      "expected_name": "Vision Interne",
+      "db_field": "vision_internal",
+      "type": "TEXT",
+      "required": false,
+      "allowed_values": ["warning", "WARNING", "bon", "BON", "à améliorer", "non défini", ""],
+      "description": "Actualité/État vision interne"
+    },
+    "R": {
+      "expected_name": "Risque identifié",
+      "db_field": "risk_identified",
+      "type": "TEXT",
+      "required": false,
+      "description": "Risques identifiés"
+    },
+    "S": {
+      "expected_name": "Action ?",
+      "alternate_names": ["Action ? ", "Action"],
+      "db_field": "action_description",
+      "type": "TEXT",
+      "required": false,
+      "normalize": true,
+      "description": "Description de l'action à mener"
+    },
+    "T": {
+      "expected_name": "Acteur",
+      "db_field": "next_actor",
+      "type": "TEXT",
+      "required": false,
+      "description": "Prochain acteur attendu"
+    },
+    "U": {
+      "expected_name": "Date dernier échange client",
+      "db_field": "last_client_exchange",
+      "type": "DATE",
+      "required": false,
+      "description": "Date du dernier échange avec le client"
+    },
+    "V": {
+      "expected_name": "Date prochain échange client",
+      "db_field": "next_client_exchange",
+      "type": "DATE",
+      "required": false,
+      "description": "Date du prochain rendez-vous client"
+    },
+    "W": {
+      "expected_name": "DLIC",
+      "db_field": "dlic",
+      "type": "DATE",
+      "required": false,
+      "description": "Date Limite Interaction Client"
+    },
+    "X": {
+      "expected_name": "DLI Date Limite Interne",
+      "alternate_names": ["DLI\nDate Limite  Interne", "DLI Date Limite  Interne"],
+      "db_field": "dli",
+      "type": "DATE",
+      "required": false,
+      "normalize": true,
+      "description": "Date Limite Interne"
+    },
+    "Y": {
+      "expected_name": "Actualité Projet",
+      "alternate_names": ["Actualité \nProjet"],
+      "db_field": "news_project",
+      "type": "TEXT",
+      "required": false,
+      "normalize": true,
+      "description": "Actualités projet"
+    },
+    "Z": {
+      "expected_name": "Actualité Commerciale",
+      "alternate_names": ["Actualité \nCommerciale"],
+      "db_field": "news_commercial",
+      "type": "TEXT",
+      "required": false,
+      "normalize": true,
+      "description": "Actualités commerciales"
+    },
+    "AA": {
+      "expected_name": "Actualité Technique",
+      "alternate_names": ["Actualité\nTechnique"],
+      "db_field": "news_technical",
+      "type": "TEXT",
+      "required": false,
+      "normalize": true,
+      "description": "Actualités techniques"
+    },
+    "AB": {
+      "expected_name": "Risque projet",
+      "db_field": null,
+      "ignored": true,
+      "description": "Colonne ignorée"
+    },
+    "AC": {
+      "expected_name": "Respect Coût projet",
+      "db_field": null,
+      "ignored": true,
+      "description": "Colonne ignorée"
+    },
+    "AD": {
+      "expected_name": "Respect Deadline",
+      "db_field": null,
+      "ignored": true,
+      "description": "Colonne ignorée"
+    },
+    "AE": {
+      "expected_name": "Temps passé",
+      "db_field": null,
+      "ignored": true,
+      "description": "Colonne ignorée"
+    },
+    "AF": {
+      "expected_name": "Satisfaction Client",
+      "db_field": null,
+      "ignored": true,
+      "description": "Colonne ignorée"
+    },
+    "AG": {
+      "expected_name": "Satisfaction Equipe",
+      "db_field": null,
+      "ignored": true,
+      "description": "Colonne ignorée"
+    },
+    "AH": {
+      "expected_name": "Retour QA/Recette/Bug",
+      "db_field": null,
+      "ignored": true,
+      "description": "Colonne ignorée"
+    },
+    "AI": {
+      "expected_name": "GLOBAL",
+      "db_field": null,
+      "ignored": true,
+      "description": "Colonne ignorée"
+    },
+    "AJ": {
+      "expected_name": "Remarques pour DATA",
+      "db_field": "data_remarks",
+      "type": "TEXT",
+      "required": false,
+      "description": "Remarques pour DATA"
+    },
+    "AK": {
+      "expected_name": "Date prochain jalon",
+      "db_field": "next_milestone_date",
+      "type": "DATE",
+      "required": false,
+      "description": "Date du prochain jalon"
+    },
+    "AL": {
+      "expected_name": "Objet prochain jalon (MEP / COPIL / PREZ)",
+      "alternate_names": ["Objet prochain jalon\n(MEP / COPIL / PREZ)"],
+      "db_field": "next_milestone_object",
+      "type": "TEXT",
+      "required": false,
+      "normalize": true,
+      "description": "Objet du prochain jalon"
+    },
+    "AM": {
+      "expected_name": "REMARQUES / OBJECTIFS A 3 mois ??",
+      "alternate_names": ["REMARQUES / OBJECTIFS \nA 3 mois ??"],
+      "db_field": "remarks_3months",
+      "type": "TEXT",
+      "required": false,
+      "normalize": true,
+      "description": "Remarques/objectifs à 3 mois"
+    },
+    "AN": {
+      "expected_name": "REMARQUES / OBJECTIFS A 6 mois ??",
+      "alternate_names": ["REMARQUES / OBJECTIFS \nA 6 mois ??"],
+      "db_field": "remarks_6months",
+      "type": "TEXT",
+      "required": false,
+      "normalize": true,
+      "description": "Remarques/objectifs à 6 mois"
+    },
+    "AO": {
+      "expected_name": "REMARQUES / OBJECTIFS A 1 an ??",
+      "alternate_names": ["REMARQUES / OBJECTIFS\nA 1 an ??"],
+      "db_field": "remarks_1year",
+      "type": "TEXT",
+      "required": false,
+      "normalize": true,
+      "description": "Remarques/objectifs à 1 an"
+    },
+    "AQ": {
+      "expected_name": "Objectif de suivi commercial et production Feuille de route",
+      "alternate_names": ["Objectif de suivi commercial et production\nFeuille de route "],
+      "db_field": "commercial_production_goal",
+      "type": "TEXT",
+      "required": false,
+      "normalize": true,
+      "description": "Objectif de suivi commercial et production"
+    },
+    "AR": {
+      "expected_name": "NB jours Dispositif mensuel",
+      "alternate_names": ["NB jours\nDispositif mensuel"],
+      "db_field": "days_dispositif_monthly",
+      "type": "INTEGER",
+      "required": false,
+      "normalize": true,
+      "description": "Nombre de jours dispositif mensuel"
+    },
+    "AS": {
+      "expected_name": "Dispositif augmentable",
+      "db_field": "dispositif_expandable",
+      "type": "TEXT",
+      "required": false,
+      "description": "Dispositif augmentable (oui, oui+, non, vide)"
+    },
+    "AT": {
+      "expected_name": "NB jours Au forfait",
+      "alternate_names": ["NB jours\nAu forfait"],
+      "db_field": "days_forfait",
+      "type": "INTEGER",
+      "required": false,
+      "normalize": true,
+      "description": "Nombre de jours au forfait"
+    },
+    "AU": {
+      "expected_name": "NB jours A signer",
+      "alternate_names": ["NB jours \nA signer"],
+      "db_field": "days_to_sign",
+      "type": "INTEGER",
+      "required": false,
+      "normalize": true,
+      "description": "Nombre de jours à signer"
+    },
+    "AV": {
+      "expected_name": "Date Démarrage",
+      "alternate_names": ["Date \nDémarrage"],
+      "db_field": "start_date",
+      "type": "DATE",
+      "required": false,
+      "normalize": true,
+      "description": "Date de démarrage"
+    },
+    "AW": {
+      "expected_name": "Projet",
+      "db_field": "potential_new_projects",
+      "type": "BOOLEAN",
+      "required": false,
+      "description": "Potentiel nouveaux projets (X = oui)"
+    },
+    "AX": {
+      "expected_name": "Maint.",
+      "db_field": "potential_maintenance",
+      "type": "BOOLEAN",
+      "required": false,
+      "description": "Potentiel maintenance (X = oui)"
+    },
+    "AY": {
+      "expected_name": "Héberg.",
+      "alternate_names": ["Herbeg."],
+      "db_field": "potential_hosting",
+      "type": "BOOLEAN",
+      "required": false,
+      "description": "Potentiel hébergement (X = oui)"
+    },
+    "AZ": {
+      "expected_name": "Infra",
+      "db_field": "potential_infra",
+      "type": "BOOLEAN",
+      "required": false,
+      "description": "Potentiel infrastructure (X = oui)"
+    },
+    "BA": {
+      "expected_name": "Conseil",
+      "db_field": "potential_consulting",
+      "type": "BOOLEAN",
+      "required": false,
+      "description": "Potentiel conseil (X = oui)"
+    }
+  }
+}
+
