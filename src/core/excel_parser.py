@@ -14,17 +14,9 @@ import logging
 import json
 import sys
 
+from .paths import get_application_path
+
 logger = logging.getLogger(__name__)
-
-
-def get_application_path():
-    """Retourne le chemin de base de l'application (compatible .exe)."""
-    if getattr(sys, 'frozen', False):
-        # Mode .exe (PyInstaller)
-        return Path(sys.executable).parent
-    else:
-        # Mode développement
-        return Path(__file__).parent.parent.parent
 
 
 class ExcelParser:
@@ -222,12 +214,16 @@ class ExcelParser:
             if isinstance(value, float):
                 return int(round(value))
             
-            # Si c'est un str, essayer de convertir
+            # Si c'est un str, vérifier d'abord les erreurs Excel
             if isinstance(value, str):
-                value = value.strip()
-                if value == '':
+                value_stripped = value.strip()
+                if value_stripped == '':
                     return None
-                return int(float(value))
+                # Détecter les erreurs Excel (#VALUE!, #REF!, #N/A, etc.)
+                if value_stripped.startswith('#') and ('!' in value_stripped or value_stripped == '#N/A'):
+                    logger.warning(f"⚠️ Erreur Excel détectée : {value_stripped}. La cellule contient une formule invalide. Veuillez corriger le fichier Excel.")
+                    return None
+                return int(float(value_stripped))
             
             return int(value)
         except (ValueError, TypeError):
@@ -340,15 +336,6 @@ class ExcelParser:
         for row_idx in range(data_start, data_end + 1):
             project = {'week_number': week_number}
             
-            # Vérifier si la ligne est vide (colonnes A, C, D obligatoires)
-            col_a_value = ws.cell(row=row_idx, column=1).value  # id_projet
-            col_c_value = ws.cell(row=row_idx, column=3).value  # bu
-            col_d_value = ws.cell(row=row_idx, column=4).value  # client_name
-            
-            # Si un des 3 champs obligatoires est vide, on ignore la ligne
-            if not col_a_value or not col_c_value or not col_d_value:
-                continue  # Ligne incomplète, on passe
-            
             # Lire chaque colonne
             for col_letter, col_info in column_mapping.items():
                 col_idx = openpyxl.utils.column_index_from_string(col_letter)
@@ -365,6 +352,20 @@ class ExcelParser:
                     converted_value = self._convert_value(cell_value, expected_type)
                 
                 project[db_field] = converted_value
+            
+            # Vérifier APRÈS conversion que les champs obligatoires sont valides
+            id_projet = project.get('id_projet')
+            bu = project.get('bu')
+            client_name = project.get('client_name')
+            
+            # Si un des 3 champs obligatoires est None ou vide, on ignore la ligne
+            # (On vérifie après conversion car la conversion peut transformer des valeurs)
+            if id_projet is None:
+                continue
+            if bu is None or (isinstance(bu, str) and not bu.strip()):
+                continue
+            if client_name is None or (isinstance(client_name, str) and not client_name.strip()):
+                continue
             
             projects.append(project)
         

@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QStatusBar, QMenuBar, QMenu, QProgressDialog
 )
 from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QAction, QFont
+from PyQt6.QtGui import QAction, QFont, QIcon
 import sys
 from pathlib import Path
 
@@ -23,10 +23,10 @@ def get_application_path():
     """Retourne le chemin de base de l'application (compatible .exe)."""
     if getattr(sys, 'frozen', False):
         # Mode .exe (PyInstaller)
-        return Path(sys.executable).parent
+        return Path(sys.executable).parent.resolve()
     else:
         # Mode développement
-        return Path(__file__).parent.parent
+        return Path(__file__).parent.parent.resolve()
 
 
 class MainWindow(QMainWindow):
@@ -50,10 +50,10 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
-        # Layout principal
+        # Layout principal (plus compact)
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setSpacing(10)
-        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(8)
+        main_layout.setContentsMargins(8, 8, 8, 8)
         
         # En-tête avec titre et logo
         header = self.create_header()
@@ -84,13 +84,41 @@ class MainWindow(QMainWindow):
         
         # Logo
         from PyQt6.QtGui import QPixmap
+        
         logo_label = QLabel()
         app_path = get_application_path()
-        logo_path = app_path / "img" / "cropped-logo-groupe-huco.webp"
-        pixmap = QPixmap(str(logo_path))
-        if not pixmap.isNull():
-            scaled_pixmap = pixmap.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-            logo_label.setPixmap(scaled_pixmap)
+        # Chemin direct depuis la racine du projet
+        logo_path = Path(__file__).parent.parent.parent / "img" / "cropped-logo-groupe-huco.webp"
+        
+        if logo_path.exists():
+            pixmap = QPixmap(str(logo_path.resolve()))  # Utiliser resolve() pour chemin absolu
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(70, 70, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                logo_label.setPixmap(scaled_pixmap)
+            else:
+                # PyQt6 ne peut peut-être pas charger .webp, essayer de convertir
+                logo_label.setMinimumWidth(70)
+                logo_label.setMinimumHeight(70)
+        else:
+            # Essayer avec app_path
+            alt_path = app_path / "img" / "cropped-logo-groupe-huco.webp"
+            if alt_path.exists():
+                pixmap = QPixmap(str(alt_path.resolve()))
+                if not pixmap.isNull():
+                    scaled_pixmap = pixmap.scaled(70, 70, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    logo_label.setPixmap(scaled_pixmap)
+                else:
+                    logo_label.setMinimumWidth(70)
+                    logo_label.setMinimumHeight(70)
+            else:
+                logo_label.setMinimumWidth(70)
+                logo_label.setMinimumHeight(70)
+        
+        # Taille minimale pour le logo (au cas où)
+        if logo_label.pixmap() is None:
+            logo_label.setMinimumWidth(70)
+            logo_label.setMinimumHeight(70)
+        
         header_layout.addWidget(logo_label)
         
         # Titres
@@ -124,28 +152,45 @@ class MainWindow(QMainWindow):
         import_widget = QWidget()
         import_widget.setStyleSheet("""
             QWidget {
-                background-color: #fafafa;
+                background-color: #f5f5f5;
                 border: 1px solid #ddd;
                 border-radius: 5px;
             }
         """)
         import_layout = QHBoxLayout(import_widget)
-        import_layout.setContentsMargins(15, 10, 15, 10)
+        import_layout.setContentsMargins(20, 15, 20, 15)
         
-        # Label
-        label = QLabel("📁 Importer un fichier Excel")
-        label.setStyleSheet("color: #666; font-size: 11pt;")
-        import_layout.addWidget(label)
-        
-        import_layout.addStretch()
-        
-        # Bouton d'import compact
-        import_button = QPushButton("Choisir un fichier")
-        import_button.setMinimumHeight(35)
-        import_button.setMaximumWidth(200)
+        # Bouton principal d'import avec icône
+        import_button = QPushButton("📁 Importer un fichier Excel")
+        import_button.setMinimumHeight(45)
+        import_button.setMinimumWidth(300)
         import_button.setCursor(Qt.CursorShape.PointingHandCursor)
         import_button.clicked.connect(self.import_excel_file)
+        
+        # Style du bouton principal (bien visible)
+        import_button.setStyleSheet("""
+            QPushButton {
+                background-color: #FFC107;
+                color: #333;
+                border: 2px solid #FFA000;
+                border-radius: 5px;
+                padding: 12px 20px;
+                font-size: 14px;
+                font-weight: bold;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #FFD54F;
+                border: 2px solid #FFC107;
+            }
+            QPushButton:pressed {
+                background-color: #FFA000;
+                border: 2px solid #FF8F00;
+            }
+        """)
+        
         import_layout.addWidget(import_button)
+        import_layout.addStretch()
         
         return import_widget
     
@@ -305,6 +350,19 @@ class MainWindow(QMainWindow):
             }
             QTabBar::tab:hover {
                 background-color: #e0e0e0;
+            }
+            QGroupBox {
+                background-color: #f5f5f5;
+                border: none;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+                font-weight: bold;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
             }
         """)
     

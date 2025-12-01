@@ -8,6 +8,7 @@
   "columns": {
     "A": {
       "expected_name": "Number",
+      "alternate_names": ["0"],
       "db_field": "id_projet",
       "type": "INTEGER",
       "required": true,
@@ -30,6 +31,7 @@
     },
     "D": {
       "expected_name": "Client",
+      "alternate_names": ["Projet", "projet"],
       "db_field": "client_name",
       "type": "TEXT",
       "required": true,

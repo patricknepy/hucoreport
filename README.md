@@ -92,8 +92,7 @@ huco_report/
 │   │   └── scheduler.py       # Automatisation
 │   │
 │   └── config/                 # Configuration
-│       ├── settings.py        # Paramètres globaux
-│       └── rules.json         # Règles d'identification
+│       └── settings.py        # Paramètres globaux
 │
 ├── data/                       # Données & cache
 │   ├── templates/             # Templates de rapports
@@ -172,28 +171,13 @@ Configuration des tâches automatiques et monitoring des deadlines
 
 ## ⚙️ Configuration
 
-### Règles d'Identification Excel
+### Configuration Excel
 
-Modifiez `src/config/rules.json` pour personnaliser la détection des colonnes :
+Le schéma de validation Excel est défini dans `config/excel_schema.json`. Ce fichier contient la structure attendue des fichiers Excel importés, incluant les noms de colonnes, types de données et contraintes.
 
-```json
-{
-  "deadline": {
-    "keywords": ["deadline", "date limite", "échéance"],
-    "column_pattern": "C",
-    "format": "date"
-  },
-  "status": {
-    "keywords": ["status", "statut", "état"],
-    "column_pattern": "D",
-    "valid_values": ["En cours", "Terminé", "En attente"]
-  }
-}
-```
+### Configuration Email (à venir)
 
-### Configuration Email
-
-Via l'interface : **Outils → Paramètres → Email**
+Prochaine version : Configuration via l'interface pour l'envoi automatique de rapports.
 
 ---
 
@@ -243,8 +227,10 @@ pytest tests/ -v
 
 ### Guides
 - [DEV_GUIDE.md](./docs/DEV_GUIDE.md) - Guide développeur
-- [GUIDE_GIT.md](./GUIDE_GIT.md) - 🔧 **Guide Git (Versioning)**
-- [GUIDE_DISTRIBUTION.md](./GUIDE_DISTRIBUTION.md) - 📦 Guide de distribution
+- [INSTALL.md](./docs/INSTALL.md) - 📦 Installation et dépendances
+- [GUIDE_GIT.md](./docs/GUIDE_GIT.md) - 🔧 Guide Git complet (Versioning)
+- [GIT_RESUME.md](./docs/GIT_RESUME.md) - ⚡ Résumé Git (Commandes rapides)
+- [GUIDE_DISTRIBUTION.md](./docs/GUIDE_DISTRIBUTION.md) - 📦 Guide de distribution
 
 ---
 

@@ -13,17 +13,9 @@ import re
 import logging
 import sys
 
+from .paths import get_application_path
+
 logger = logging.getLogger(__name__)
-
-
-def get_application_path():
-    """Retourne le chemin de base de l'application (compatible .exe)."""
-    if getattr(sys, 'frozen', False):
-        # Mode .exe (PyInstaller)
-        return Path(sys.executable).parent
-    else:
-        # Mode développement
-        return Path(__file__).parent.parent.parent
 
 
 class ExcelValidator:
@@ -82,23 +74,29 @@ class ExcelValidator:
         
         return text
     
-    def _compare_column_name(self, found: str, expected: str, alternate_names: List[str] = None) -> bool:
+    def _compare_column_name(self, found: Any, expected: str, alternate_names: List[str] = None) -> bool:
         """
         Compare un nom de colonne trouvé avec le nom attendu.
         
         Args:
-            found: Nom trouvé dans le fichier Excel
+            found: Nom trouvé dans le fichier Excel (peut être string, int, float, etc.)
             expected: Nom attendu selon le schéma
             alternate_names: Noms alternatifs acceptés
             
         Returns:
             True si correspondance, False sinon
         """
-        if not found:
+        # Convertir en string si ce n'est pas déjà le cas (gère le cas "0" qui peut être un int)
+        if found is None:
+            return False
+        
+        found_str = str(found).strip() if found is not None else ""
+        
+        if not found_str:
             return False
         
         # Normaliser
-        found_normalized = self._normalize_text(found)
+        found_normalized = self._normalize_text(found_str)
         expected_normalized = self._normalize_text(expected)
         
         # Comparaison exacte normalisée
@@ -108,7 +106,8 @@ class ExcelValidator:
         # Comparaison avec noms alternatifs
         if alternate_names:
             for alt in alternate_names:
-                alt_normalized = self._normalize_text(alt)
+                alt_str = str(alt).strip()  # Convertir en string aussi
+                alt_normalized = self._normalize_text(alt_str)
                 if found_normalized.lower() == alt_normalized.lower():
                     return True
         
@@ -178,13 +177,32 @@ class ExcelValidator:
                 is_ignored = col_schema.get('ignored', False)
                 is_required = col_schema.get('required', False)
                 
-                # Comparer
+                # Comparer avec le nom attendu et les noms alternatifs
                 match = self._compare_column_name(cell_value, expected_name, alternate_names)
+                is_alternate = False
+                matched_alternate = None
+                
+                # Vérifier si c'est un nom alternatif (si pas de match direct)
+                if alternate_names and not match:
+                    for alt_name in alternate_names:
+                        if self._compare_column_name(cell_value, alt_name, []):
+                            match = True
+                            is_alternate = True
+                            matched_alternate = alt_name
+                            break
                 
                 if match:
+                    # Colonne trouvée (nom exact ou alternatif accepté)
+                    if is_alternate:
+                        # Nom alternatif détecté et accepté
+                        result['warnings'].append(
+                            f"ℹ️ Col {col_letter}: Nom alternatif accepté '{cell_value}' (attendu '{expected_name}')"
+                        )
+                        
                     result['columns_validated'][col_letter] = {
-                        "status": "✅",
+                        "status": "✅" if not is_alternate else "✅ (nom alternatif)",
                         "found": cell_value,
+                        "matched_alternate": matched_alternate,
                         "expected": expected_name,
                         "db_field": col_schema.get('db_field')
                     }

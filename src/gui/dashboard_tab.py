@@ -7,11 +7,23 @@ Affiche les indicateurs clés de performance pour la semaine sélectionnée.
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QComboBox, QGroupBox, QListWidget, QMessageBox,
-    QScrollArea, QFrame
+    QScrollArea, QFrame, QGridLayout, QSizePolicy
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QDate
 from PyQt6.QtGui import QFont
 from typing import List, Dict, Any
+from datetime import datetime, timedelta, date
+from calendar import day_name
+import locale
+
+# Configuration locale pour les noms de jours en français
+try:
+    locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+except:
+    try:
+        locale.setlocale(locale.LC_TIME, 'French_France.1252')
+    except:
+        pass  # Si locale français non disponible, on utilisera l'anglais
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -19,6 +31,9 @@ import matplotlib.pyplot as plt
 
 from src.core.database import Database
 from src.core.dashboard_calculator import DashboardCalculator
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DashboardTab(QWidget):
@@ -48,6 +63,12 @@ class DashboardTab(QWidget):
         
         content_widget = QWidget()
         content_layout = QVBoxLayout()
+        content_layout.setSpacing(8)  # Réduire espacement entre sections
+        content_layout.setContentsMargins(5, 5, 5, 5)  # Réduire marges
+        
+        # DEADLINES EN PREMIER (tuiles horizontales)
+        self.deadlines_group = self._create_deadlines_section()
+        content_layout.addWidget(self.deadlines_group)
         
         # VUE GLOBALE (3 colonnes)
         self.vue_globale_group = self._create_vue_globale()
@@ -56,10 +77,6 @@ class DashboardTab(QWidget):
         # ACTUALITÉ CLIENT (3 colonnes)
         self.actualite_group = self._create_actualite_client()
         content_layout.addWidget(self.actualite_group)
-        
-        # Actions & Deadlines
-        self.deadlines_group = self._create_deadlines_section()
-        content_layout.addWidget(self.deadlines_group)
         
         # RDV Client
         self.rdv_group = self._create_rdv_section()
@@ -96,70 +113,216 @@ class DashboardTab(QWidget):
         widget.setLayout(layout)
         return widget
     
+    def _create_kpi_tile(self, title: str, value: str, color: str = "#2196F3", icon: str = "") -> QFrame:
+        """Crée une tuile KPI stylisée (fond gris, sans bordure)."""
+        tile = QFrame()
+        tile.setFrameShape(QFrame.Shape.StyledPanel)
+        # Fond gris sans bordure, SANS padding CSS qui coupe le texte
+        tile.setStyleSheet(f"""
+            QFrame {{
+                background-color: #f5f5f5;
+                border: none;
+                border-radius: 5px;
+            }}
+        """)
+        
+        # Tuile carrée et assez grande pour le texte complet (augmentée pour 32 pouces)
+        tile.setFixedWidth(200)
+        tile.setFixedHeight(200)
+        
+        layout = QVBoxLayout(tile)
+        layout.setSpacing(5)  # Réduit l'espace entre titre et valeur
+        # Marges réduites pour éviter de couper les caractères
+        layout.setContentsMargins(8, 8, 8, 8)
+        
+        # Icône + Titre (plus grand et lisible)
+        title_label = QLabel(f"{icon} {title}")
+        title_label.setStyleSheet(f"font-size: 14pt; color: #333; font-weight: bold;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setWordWrap(True)
+        title_label.setMinimumHeight(40)  # Réduit la hauteur minimale
+        title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        layout.addWidget(title_label)
+        
+        # Valeur (plus grande pour 32 pouces) - pas de contrainte de largeur
+        value_label = QLabel(value)
+        value_label.setStyleSheet(f"font-size: 36pt; color: {color}; font-weight: bold;")
+        value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        value_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        layout.addWidget(value_label)
+        
+        # Stocker le label pour mise à jour
+        tile.value_label = value_label
+        
+        return tile
+    
+    def _create_compact_tile(self, title: str, value: str, color: str = "#2196F3") -> QFrame:
+        """Crée une tuile compacte carrée (fond coloré, sans bordure)."""
+        tile = QFrame()
+        tile.setFrameShape(QFrame.Shape.StyledPanel)
+        # Fond coloré sans bordure, SANS padding CSS qui coupe le texte
+        tile.setStyleSheet(f"""
+            QFrame {{
+                background-color: {color};
+                border: none;
+                border-radius: 5px;
+            }}
+        """)
+        # Tuile carrée et assez grande pour le texte complet
+        tile.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        tile.setFixedWidth(160)
+        tile.setFixedHeight(160)
+        
+        layout = QVBoxLayout(tile)
+        layout.setSpacing(5)
+        # Marges réduites pour éviter de couper les caractères
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Valeur (lisible, blanc sur fond coloré) - pas de contrainte de largeur
+        value_label = QLabel(value)
+        value_label.setStyleSheet("font-size: 32pt; color: white; font-weight: bold;")
+        value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        value_label.setWordWrap(False)
+        # S'assurer que le label peut afficher tout le contenu
+        value_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        layout.addWidget(value_label)
+        
+        # Titre (lisible, blanc sur fond coloré, avec retour à la ligne automatique)
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-size: 10pt; color: white; font-weight: bold;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setWordWrap(True)
+        title_label.setMinimumHeight(50)  # Espace suffisant pour 2-3 lignes
+        # SUPPRIMER setMaximumWidth pour laisser tout l'espace disponible
+        title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        layout.addWidget(title_label)
+        
+        # Stocker le label pour mise à jour
+        tile.value_label = value_label
+        
+        return tile
+    
     def _create_vue_globale(self) -> QGroupBox:
-        """Vue Globale : 3 colonnes (Stats | Projets actifs par BU | Projets par CDP)."""
+        """Vue Globale : Chiffres à gauche | Ligne orange | Graphiques à droite."""
         group = QGroupBox("📈 VUE GLOBALE")
+        # Bordure noire pour compartimenter le bloc
+        group.setStyleSheet("""
+            QGroupBox {
+                background-color: #f5f5f5;
+                border: 2px solid black;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+                font-weight: bold;
+            }
+        """)
         main_layout = QHBoxLayout()
+        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(10, 8, 10, 8)
         
-        # GAUCHE : Stats
-        left_layout = QVBoxLayout()
+        # GAUCHE : Tuiles KPI (2x2 grid) - plus compact
+        left_layout = QGridLayout()
+        left_layout.setSpacing(8)
+        left_layout.setContentsMargins(5, 5, 5, 5)
         
-        self.total_label = QLabel("Total projets : 0")
-        self.total_label.setStyleSheet("font-size: 14pt; font-weight: bold; color: #2196F3; padding: 10px;")
-        left_layout.addWidget(self.total_label)
+        self.total_tile = self._create_kpi_tile("Total projets", "51", "#2196F3", "📊")
+        left_layout.addWidget(self.total_tile, 0, 0)
         
-        self.active_label = QLabel("Projets actifs : 0")
-        self.active_label.setStyleSheet("font-size: 14pt; font-weight: bold; color: #4CAF50; padding: 10px;")
-        left_layout.addWidget(self.active_label)
+        self.active_tile = self._create_kpi_tile("Projets actifs", "47", "#4CAF50", "✅")
+        left_layout.addWidget(self.active_tile, 0, 1)
         
-        self.dispositif_monthly_label = QLabel("Dispositif mensuel : 0 jours")
-        self.dispositif_monthly_label.setStyleSheet("font-size: 12pt; color: #666; padding: 10px;")
-        left_layout.addWidget(self.dispositif_monthly_label)
+        self.dispositif_tile = self._create_kpi_tile("Dispositif mensuel", "245 j", "#FF9800", "📅")
+        left_layout.addWidget(self.dispositif_tile, 1, 0)
         
-        self.dispositif_expandable_label = QLabel("Dispositifs augmentables : 0")
-        self.dispositif_expandable_label.setStyleSheet("font-size: 12pt; color: #666; padding: 10px;")
-        left_layout.addWidget(self.dispositif_expandable_label)
+        self.expandable_tile = self._create_kpi_tile("Augmentables", "13", "#9C27B0", "📈")
+        left_layout.addWidget(self.expandable_tile, 1, 1)
         
-        left_layout.addStretch()
-        main_layout.addLayout(left_layout, 1)
+        # Widget container pour le grid
+        left_widget = QWidget()
+        left_widget.setLayout(left_layout)
+        main_layout.addWidget(left_widget)
         
-        # MILIEU : Graphique Projets actifs par BU
+        # Ligne verticale orange de séparation
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setLineWidth(3)
+        separator.setStyleSheet("background-color: #FFA500; max-width: 3px;")
+        main_layout.addWidget(separator)
+        
+        # Graphiques à droite (2 colonnes) - plus compact
+        right_layout = QHBoxLayout()
+        right_layout.setSpacing(15)
+        right_layout.setContentsMargins(10, 5, 10, 5)
+        
+        # Graphique Projets actifs par BU
         self.chart_bu = self._create_bar_chart("Projets actifs par BU")
-        main_layout.addWidget(self.chart_bu, 1)
+        right_layout.addWidget(self.chart_bu)
         
-        # DROITE : Graphique Projets par Chef de projet
+        # Graphique Projets par Chef de projet
         self.chart_manager = self._create_bar_chart("Projets par Chef de projet")
-        main_layout.addWidget(self.chart_manager, 1)
+        right_layout.addWidget(self.chart_manager)
+        
+        right_layout.addStretch()  # Espace à droite pour ne pas coller au bord
+        main_layout.addLayout(right_layout, 2)
         
         group.setLayout(main_layout)
         return group
     
     def _create_actualite_client(self) -> QGroupBox:
-        """Actualité Client : 3 colonnes (Stats | Warnings par BU | Actions par acteur)."""
+        """Actualité Client : Chiffres à gauche | Ligne orange | Graphiques à droite."""
         group = QGroupBox("⚠️ ACTUALITÉ CLIENT")
+        # Bordure noire pour compartimenter le bloc
+        group.setStyleSheet("""
+            QGroupBox {
+                background-color: #f5f5f5;
+                border: 2px solid black;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+                font-weight: bold;
+            }
+        """)
         main_layout = QHBoxLayout()
+        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(15, 15, 15, 15)
         
-        # GAUCHE : Stats
+        # GAUCHE : Tuiles KPI (2 seulement maintenant, le % est dans les deadlines)
         left_layout = QVBoxLayout()
+        left_layout.setSpacing(10)
+        left_layout.setContentsMargins(5, 5, 5, 5)
         
-        self.warning_client_label = QLabel("Warning Vision Client (P) : 0")
-        self.warning_client_label.setStyleSheet("font-size: 13pt; font-weight: bold; color: #FF9800; padding: 10px;")
-        left_layout.addWidget(self.warning_client_label)
+        self.warning_client_tile = self._create_kpi_tile("Warning Vision Client", "3", "#FF9800", "⚠️")
+        left_layout.addWidget(self.warning_client_tile)
         
-        self.warning_internal_label = QLabel("Warning Vision Interne (Q) : 0")
-        self.warning_internal_label.setStyleSheet("font-size: 13pt; font-weight: bold; color: #FF9800; padding: 10px;")
-        left_layout.addWidget(self.warning_internal_label)
+        self.warning_internal_tile = self._create_kpi_tile("Warning Vision Interne", "9", "#FF5722", "🔴")
+        left_layout.addWidget(self.warning_internal_tile)
         
         left_layout.addStretch()
-        main_layout.addLayout(left_layout, 1)
+        left_widget = QWidget()
+        left_widget.setLayout(left_layout)
+        main_layout.addWidget(left_widget)
         
-        # MILIEU : Graphique Warnings par BU
+        # Ligne verticale orange de séparation
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setLineWidth(3)
+        separator.setStyleSheet("background-color: #FFA500; max-width: 3px;")
+        main_layout.addWidget(separator)
+        
+        # Graphiques et calendrier à droite
+        right_layout = QHBoxLayout()
+        right_layout.setSpacing(10)
+        
+        # Graphique Warnings par BU
         self.chart_warnings_bu = self._create_bar_chart("Warnings par BU", color='#FF9800')
-        main_layout.addWidget(self.chart_warnings_bu, 1)
+        right_layout.addWidget(self.chart_warnings_bu)
         
-        # DROITE : Graphique Actions par acteur
-        self.chart_actions = self._create_bar_chart("Actions par acteur", color='#FF9800')
-        main_layout.addWidget(self.chart_actions, 1)
+        # Actions par acteur (style calendrier)
+        self.actions_calendar = self._create_actions_calendar()
+        right_layout.addWidget(self.actions_calendar, 2)
+        
+        main_layout.addLayout(right_layout, 2)
         
         group.setLayout(main_layout)
         return group
@@ -168,18 +331,25 @@ class DashboardTab(QWidget):
         """Crée un widget contenant un graphique à bâtons matplotlib."""
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(3)  # Réduit l'espace entre titre et graphique
+        layout.setContentsMargins(5, 3, 5, 3)  # Réduit les marges verticales
         
-        # Titre
+        # Titre (lisible)
         title_label = QLabel(title)
         title_label.setStyleSheet("font-weight: bold; font-size: 10pt;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
         
-        # Figure matplotlib
-        fig = Figure(figsize=(4, 3), dpi=80)
+        # Figure matplotlib (taille adaptée, pas de fond trop grand)
+        fig = Figure(figsize=(2.8, 2.2), dpi=80)
+        fig.patch.set_facecolor('#ffffff')  # Fond blanc pour la figure
         canvas = FigureCanvas(fig)
-        canvas.setMinimumHeight(200)
+        canvas.setFixedHeight(180)
+        canvas.setFixedWidth(250)
+        
+        # Widget de la même taille que le canvas (pas de fond inutile)
+        widget.setFixedWidth(260)
+        widget.setFixedHeight(200)
         
         # Stocker la figure et le canvas pour mise à jour
         canvas.figure = fig
@@ -219,6 +389,7 @@ class DashboardTab(QWidget):
             ax.set_xticks(range(len(labels)))
             ax.set_xticklabels(labels, rotation=45, ha='right', fontsize=8)
             ax.set_ylabel('Nombre', fontsize=9)
+            ax.tick_params(axis='both', labelsize=8)
             ax.grid(axis='y', alpha=0.3)
             
             # Afficher les valeurs sur les barres
@@ -234,44 +405,214 @@ class DashboardTab(QWidget):
         canvas.draw()
     
     def _create_deadlines_section(self) -> QGroupBox:
+        """Section Deadlines avec tuiles horizontales épurées."""
         group = QGroupBox("📅 ACTIONS & DEADLINES CETTE SEMAINE")
-        layout = QVBoxLayout()
+        # Bordure noire pour compartimenter le bloc
+        group.setStyleSheet("""
+            QGroupBox {
+                background-color: #f5f5f5;
+                border: 2px solid black;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+                font-weight: bold;
+            }
+        """)
+        main_layout = QVBoxLayout()
+        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(15, 15, 15, 15)
         
-        self.dlic_week_label = QLabel("• DLIC à traiter (non dépassée) : 0")
-        layout.addWidget(self.dlic_week_label)
+        # Layout horizontal pour les tuiles (ne pas étirer)
+        tiles_layout = QHBoxLayout()
+        tiles_layout.setSpacing(8)
+        tiles_layout.setContentsMargins(5, 5, 5, 5)
         
-        self.dli_week_label = QLabel("• DLI à traiter (non dépassée) : 0")
-        layout.addWidget(self.dli_week_label)
+        # 6 tuiles compactes en ligne (le % en premier)
+        self.pct_warning_tile = self._create_compact_tile("% Dossiers\nen warning", "0%", "#E91E63")
+        tiles_layout.addWidget(self.pct_warning_tile, alignment=Qt.AlignmentFlag.AlignLeft)
         
-        self.dlic_overdue_label = QLabel("• DLIC dépassées : 0")
-        self.dlic_overdue_label.setStyleSheet("color: #F44336; font-weight: bold;")
-        layout.addWidget(self.dlic_overdue_label)
+        self.dlic_week_tile = self._create_compact_tile("DLIC à traiter\n(semaine en cours)", "0", "#2196F3")
+        tiles_layout.addWidget(self.dlic_week_tile, alignment=Qt.AlignmentFlag.AlignLeft)
         
-        self.dli_overdue_label = QLabel("• DLI dépassées : 0")
-        self.dli_overdue_label.setStyleSheet("color: #F44336; font-weight: bold;")
-        layout.addWidget(self.dli_overdue_label)
+        self.dli_week_tile = self._create_compact_tile("DLI à traiter\n(semaine en cours)", "0", "#03A9F4")
+        tiles_layout.addWidget(self.dli_week_tile, alignment=Qt.AlignmentFlag.AlignLeft)
         
-        self.dlic_empty_label = QLabel("• DLIC vides (projets actifs) : 0")
-        self.dlic_empty_label.setStyleSheet("color: #FF9800;")
-        layout.addWidget(self.dlic_empty_label)
+        self.dlic_overdue_tile = self._create_compact_tile("DLIC dépassées", "0", "#F44336")
+        tiles_layout.addWidget(self.dlic_overdue_tile, alignment=Qt.AlignmentFlag.AlignLeft)
         
-        group.setLayout(layout)
+        self.dli_overdue_tile = self._create_compact_tile("DLI dépassées", "0", "#E53935")
+        tiles_layout.addWidget(self.dli_overdue_tile, alignment=Qt.AlignmentFlag.AlignLeft)
+        
+        self.dlic_empty_tile = self._create_compact_tile("DLIC vides\n(projets actifs)", "0", "#FF9800")
+        tiles_layout.addWidget(self.dlic_empty_tile, alignment=Qt.AlignmentFlag.AlignLeft)
+        
+        tiles_layout.addStretch()  # Pousser les tuiles à gauche
+        main_layout.addLayout(tiles_layout)
+        
+        group.setLayout(main_layout)
         return group
     
     def _create_rdv_section(self) -> QGroupBox:
         group = QGroupBox("🤝 RENDEZ-VOUS CLIENT CETTE SEMAINE")
+        # Bordure noire pour compartimenter le bloc
+        group.setStyleSheet("""
+            QGroupBox {
+                background-color: #f5f5f5;
+                border: 2px solid black;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+                font-weight: bold;
+            }
+        """)
         layout = QVBoxLayout()
+        layout.setContentsMargins(15, 15, 15, 15)
         
         self.rdv_count_label = QLabel("0 rendez-vous programmés")
-        self.rdv_count_label.setStyleSheet("font-weight: bold;")
+        self.rdv_count_label.setStyleSheet("font-weight: bold; font-size: 11pt; padding: 5px;")
         layout.addWidget(self.rdv_count_label)
         
-        self.rdv_list = QListWidget()
-        self.rdv_list.itemDoubleClicked.connect(self.on_rdv_clicked)
-        layout.addWidget(self.rdv_list)
+        # Calendrier hebdomadaire
+        self.calendar_widget = QWidget()
+        self.calendar_layout = QHBoxLayout(self.calendar_widget)
+        self.calendar_layout.setSpacing(5)
+        layout.addWidget(self.calendar_widget)
+        
+        # Stocker les colonnes du calendrier
+        self.calendar_columns = []
         
         group.setLayout(layout)
         return group
+    
+    def _create_calendar_day_column(self, day_name: str, date_str: str) -> QFrame:
+        """Crée une colonne pour un jour du calendrier."""
+        column = QFrame()
+        column.setFrameShape(QFrame.Shape.StyledPanel)
+        column.setStyleSheet("""
+            QFrame {
+                background-color: #f9f9f9;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+        """)
+        column.setMinimumWidth(120)
+        column.setMinimumHeight(200)  # Hauteur minimale pour voir les clients
+        
+        layout = QVBoxLayout(column)
+        layout.setSpacing(3)
+        layout.setContentsMargins(5, 5, 5, 5)
+        
+        # En-tête : Jour
+        day_label = QLabel(day_name)
+        day_label.setStyleSheet("font-weight: bold; font-size: 10pt; color: #2196F3;")
+        day_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(day_label)
+        
+        # En-tête : Date
+        date_label = QLabel(date_str)
+        date_label.setStyleSheet("font-size: 9pt; color: #666;")
+        date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(date_label)
+        
+        # Séparateur
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setStyleSheet("background-color: #ddd;")
+        layout.addWidget(separator)
+        
+        # Zone pour les RDV (liste)
+        rdv_container = QWidget()
+        rdv_container.setVisible(True)  # S'assurer que le container est visible
+        rdv_layout = QVBoxLayout(rdv_container)
+        rdv_layout.setSpacing(3)
+        rdv_layout.setContentsMargins(5, 5, 5, 5)  # Marges pour voir les labels
+        rdv_layout.addStretch()  # Stretch initial qui sera retiré avant d'ajouter les labels
+        
+        layout.addWidget(rdv_container)
+        layout.setStretchFactor(rdv_container, 1)  # Permettre au container de s'étendre
+        
+        # Stocker le layout des RDV pour y ajouter des éléments plus tard
+        column.rdv_layout = rdv_layout
+        column.rdv_data = []
+        
+        return column
+    
+    def _create_actions_calendar(self) -> QWidget:
+        """Crée une visualisation style calendrier pour les actions par acteur."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(5, 5, 5, 5)
+        
+        # Titre
+        title_label = QLabel("Actions par acteur")
+        title_label.setStyleSheet("font-weight: bold; font-size: 10pt;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
+        
+        # Scroll area pour le calendrier
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        
+        # Widget contenant les colonnes d'acteurs
+        calendar_widget = QWidget()
+        self.actions_calendar_layout = QHBoxLayout(calendar_widget)
+        self.actions_calendar_layout.setSpacing(10)
+        self.actions_calendar_layout.setContentsMargins(5, 5, 5, 5)
+        
+        scroll.setWidget(calendar_widget)
+        layout.addWidget(scroll)
+        
+        # Stocker les colonnes d'acteurs
+        self.actions_columns = []
+        
+        return widget
+    
+    def _create_actor_column(self, actor_name: str) -> QFrame:
+        """Crée une colonne pour un acteur (style calendrier)."""
+        column = QFrame()
+        column.setFrameShape(QFrame.Shape.StyledPanel)
+        column.setStyleSheet("""
+            QFrame {
+                background-color: #fff3cd;
+                border: 2px solid #ffc107;
+                border-radius: 5px;
+            }
+        """)
+        column.setMinimumWidth(150)
+        column.setMaximumWidth(200)
+        
+        layout = QVBoxLayout(column)
+        layout.setSpacing(5)
+        layout.setContentsMargins(10, 10, 10, 10)
+        
+        # En-tête : Nom de l'acteur
+        actor_label = QLabel(actor_name)
+        actor_label.setStyleSheet("font-weight: bold; font-size: 11pt; color: #856404;")
+        actor_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        actor_label.setWordWrap(True)
+        layout.addWidget(actor_label)
+        
+        # Séparateur
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setStyleSheet("background-color: #ffc107; max-height: 2px;")
+        layout.addWidget(separator)
+        
+        # Zone pour les clients (liste)
+        clients_container = QWidget()
+        clients_layout = QVBoxLayout(clients_container)
+        clients_layout.setSpacing(5)
+        clients_layout.setContentsMargins(0, 0, 0, 0)
+        clients_layout.addStretch()
+        
+        layout.addWidget(clients_container)
+        
+        # Stocker le layout des clients pour y ajouter des éléments plus tard
+        column.clients_layout = clients_layout
+        column.clients_data = []
+        
+        return column
     
     def load_available_weeks(self):
         weeks = self.db.get_available_weeks()
@@ -308,11 +649,11 @@ class DashboardTab(QWidget):
             calc = DashboardCalculator(self.db)
             indicators = calc.get_all_indicators(self.current_week)
             
-            # Vue Globale - Stats
-            self.total_label.setText(f"Total projets : {indicators['total_projects']}")
-            self.active_label.setText(f"Projets actifs : {indicators['active_projects']}")
-            self.dispositif_monthly_label.setText(f"Dispositif mensuel : {indicators['dispositif_monthly']} jours")
-            self.dispositif_expandable_label.setText(f"Dispositifs augmentables : {indicators['dispositif_expandable']}")
+            # Vue Globale - Tuiles KPI
+            self.total_tile.value_label.setText(str(indicators['total_projects']))
+            self.active_tile.value_label.setText(str(indicators['active_projects']))
+            self.dispositif_tile.value_label.setText(f"{indicators['dispositif_monthly']} j")
+            self.expandable_tile.value_label.setText(str(indicators['dispositif_expandable']))
             
             # Vue Globale - Graphique Projets actifs par BU
             bu_data = calc.get_active_projects_by_bu(self.current_week)
@@ -322,48 +663,291 @@ class DashboardTab(QWidget):
             managers = calc.get_projects_by_manager(self.current_week)
             self._update_bar_chart(self.chart_manager, managers, 'project_manager', 'count')
             
-            # Actualité Client - Stats
-            self.warning_client_label.setText(f"Warning Vision Client (P) : {indicators['warning_vision_client']}")
-            self.warning_internal_label.setText(f"Warning Vision Interne (Q) : {indicators['warning_vision_internal']}")
+            # Actualité Client - Tuiles KPI
+            self.warning_client_tile.value_label.setText(str(indicators['warning_vision_client']))
+            self.warning_internal_tile.value_label.setText(str(indicators['warning_vision_internal']))
             
             # Actualité Client - Graphique Warnings par BU
             warnings_bu = calc.get_warnings_by_bu(self.current_week)
             self._update_bar_chart(self.chart_warnings_bu, warnings_bu, 'bu', 'count')
             
-            # Actualité Client - Graphique Actions par acteur
-            actions = calc.get_actions_by_actor(self.current_week)
-            actions_data = actions['with_actor']
+            # Actualité Client - Actions par acteur (calendrier)
+            actions_data = calc.get_actions_by_actor_with_clients(self.current_week)
+            self._update_actions_calendar(actions_data)
             
-            # Ajouter "VIDE" en rouge si nécessaire
-            if actions['empty'] > 0:
-                actions_data.append({'next_actor': '⚠️ VIDE', 'count': actions['empty']})
+            # Deadlines - Tuiles compactes (avec % en premier)
+            self.pct_warning_tile.value_label.setText(f"{indicators.get('pct_projects_with_warning', 0)}%")
+            self.dlic_week_tile.value_label.setText(str(indicators['dlic_this_week']))
+            self.dli_week_tile.value_label.setText(str(indicators['dli_this_week']))
+            self.dlic_overdue_tile.value_label.setText(str(indicators['dlic_overdue']))
+            self.dli_overdue_tile.value_label.setText(str(indicators['dli_overdue']))
+            self.dlic_empty_tile.value_label.setText(str(indicators['dlic_empty']))
             
-            self._update_bar_chart(self.chart_actions, actions_data, 'next_actor', 'count')
-            
-            # Deadlines
-            self.dlic_week_label.setText(f"• DLIC à traiter (non dépassée) : {indicators['dlic_this_week']}")
-            self.dli_week_label.setText(f"• DLI à traiter (non dépassée) : {indicators['dli_this_week']}")
-            self.dlic_overdue_label.setText(f"• DLIC dépassées : {indicators['dlic_overdue']} 🔴")
-            self.dli_overdue_label.setText(f"• DLI dépassées : {indicators['dli_overdue']} 🔴")
-            self.dlic_empty_label.setText(f"• DLIC vides (projets actifs) : {indicators['dlic_empty']} ⚠️")
-            
-            # RDV Client
+            # RDV Client - Calendrier
             rdv_list = indicators['rdv_client_this_week']
             self.rdv_count_label.setText(f"{len(rdv_list)} rendez-vous programmés")
             
-            self.rdv_list.clear()
-            for rdv in rdv_list:
-                item_text = f"{rdv['date_formattee']} - {rdv['client_name']}"
-                self.rdv_list.addItem(item_text)
-                item = self.rdv_list.item(self.rdv_list.count() - 1)
-                item.setData(Qt.ItemDataRole.UserRole, rdv['id_projet'])
+            # Debug: logger les RDV reçus
+            logger.info(f"📅 Mise à jour calendrier avec {len(rdv_list)} RDV")
+            if rdv_list:
+                logger.info(f"📅 Premier RDV: {rdv_list[0]}")
+            
+            self._update_calendar(rdv_list)
             
         except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Erreur : {str(e)}")
+            QMessageBox.critical(self, "Erreur", f"Erreur lors de la mise à jour du dashboard : {str(e)}")
     
-    def on_rdv_clicked(self, item):
-        id_projet = item.data(Qt.ItemDataRole.UserRole)
+    def _update_calendar(self, rdv_list: List[Dict[str, Any]]):
+        """Met à jour le calendrier avec les RDV de la semaine."""
+        # Nettoyer l'ancien calendrier - supprimer tous les widgets
+        while self.calendar_layout.count():
+            item = self.calendar_layout.takeAt(0)
+            if item.widget():
+                widget = item.widget()
+                widget.setParent(None)
+                widget.deleteLater()
         
+        self.calendar_columns = []
+        
+        # Déterminer les dates de la semaine actuelle (lundi à dimanche)
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Trouver le lundi de la semaine actuelle (weekday() retourne 0=lundi, 6=dimanche)
+        days_since_monday = today.weekday()
+        monday = today - timedelta(days=days_since_monday)
+        
+        logger.info(f"📅 Calcul semaine RDV - Aujourd'hui: {today.date()}, Lundi semaine: {monday.date()}")
+        logger.info(f"📅 {len(rdv_list)} RDV reçus du calculateur")
+        
+        # Noms des jours en français
+        day_names_fr = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+        
+        # Créer les 7 colonnes
+        for i in range(7):
+            day_date = monday + timedelta(days=i)
+            day_name = day_names_fr[i]
+            date_str = day_date.strftime('%d/%m')
+            
+            # Créer la colonne
+            column = self._create_calendar_day_column(day_name, date_str)
+            self.calendar_layout.addWidget(column)
+            self.calendar_columns.append(column)
+            
+            # Filtrer les RDV pour ce jour
+            day_rdv = [rdv for rdv in rdv_list if self._rdv_is_on_date(rdv, day_date)]
+            
+            # Debug: logger le nombre de RDV trouvés pour ce jour
+            if day_rdv:
+                logger.info(f"📅 Jour {day_name} {date_str}: {len(day_rdv)} RDV trouvés")
+                for rdv in day_rdv:
+                    logger.info(f"  - {rdv.get('client_name', 'N/A')} (date: {rdv.get('next_client_exchange', 'N/A')})")
+            
+            # Retirer le stretch initial s'il existe
+            if column.rdv_layout.count() > 0:
+                last_item = column.rdv_layout.itemAt(column.rdv_layout.count() - 1)
+                if last_item and last_item.spacerItem():
+                    column.rdv_layout.removeItem(last_item)
+            
+            # Ajouter les RDV à la colonne
+            for rdv in day_rdv:
+                rdv_label = QLabel(rdv['client_name'])
+                rdv_label.setStyleSheet("""
+                    background-color: #E3F2FD;
+                    border-left: 3px solid #2196F3;
+                    padding: 8px;
+                    margin: 3px 0;
+                    font-size: 9pt;
+                    font-weight: normal;
+                    border-radius: 3px;
+                    color: #1976D2;
+                """)
+                rdv_label.setMinimumHeight(30)
+                rdv_label.setWordWrap(True)
+                rdv_label.setCursor(Qt.CursorShape.PointingHandCursor)
+                rdv_label.setToolTip(f"Double-cliquez pour voir la fiche projet")
+                rdv_label.setVisible(True)  # S'assurer que le label est visible
+                
+                # Stocker l'id_projet
+                rdv_label.setProperty('id_projet', rdv['id_projet'])
+                
+                # Événement double-clic
+                rdv_label.mouseDoubleClickEvent = lambda event, proj_id=rdv['id_projet']: self.on_rdv_label_clicked(proj_id)
+                
+                # Ajouter le label au layout
+                column.rdv_layout.addWidget(rdv_label)
+            
+            # Ajouter le stretch à la fin pour pousser les labels vers le haut
+            column.rdv_layout.addStretch()
+        
+        # Forcer la mise à jour de l'affichage
+        self.calendar_widget.update()
+        self.calendar_widget.repaint()
+    
+    def _rdv_is_on_date(self, rdv: Dict[str, Any], target_date: datetime) -> bool:
+        """Vérifie si un RDV est à la date cible."""
+        try:
+            rdv_date_value = rdv.get('next_client_exchange')
+            if rdv_date_value is None:
+                return False
+            
+            # SQLite avec PARSE_DECLTYPES retourne un datetime.date pour les colonnes DATE
+            if isinstance(rdv_date_value, date) and not isinstance(rdv_date_value, datetime):
+                # C'est un datetime.date (pas datetime.datetime)
+                rdv_date_obj = datetime.combine(rdv_date_value, datetime.min.time())
+            elif isinstance(rdv_date_value, datetime):
+                # C'est déjà un datetime.datetime
+                rdv_date_obj = rdv_date_value
+            elif isinstance(rdv_date_value, str):
+                # C'est une string, essayer de parser
+                for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%Y-%m-%d %H:%M:%S']:
+                    try:
+                        rdv_date_obj = datetime.strptime(rdv_date_value, fmt)
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    logger.warning(f"📅 Impossible de parser la date RDV: {rdv_date_value} (type: {type(rdv_date_value).__name__})")
+                    return False
+            else:
+                logger.warning(f"📅 Type de date non géré: {rdv_date_value} (type: {type(rdv_date_value).__name__})")
+                return False
+            
+            # Comparer uniquement les dates (sans l'heure)
+            return rdv_date_obj.date() == target_date.date()
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la vérification de date RDV: {e}, rdv={rdv}")
+            return False
+    
+    def on_rdv_label_clicked(self, id_projet: int):
+        """Gère le double-clic sur un RDV."""
         if id_projet and self.current_week:
             QMessageBox.information(self, "Fiche Projet", f"Fiche projet #{id_projet}\n\n(À développer)")
             self.project_clicked.emit(id_projet, self.current_week)
+    
+    def _update_actions_calendar(self, actions_data: Dict[str, Any]):
+        """Met à jour le calendrier d'actions par acteur avec les clients en warning."""
+        # Nettoyer l'ancien calendrier
+        while self.actions_calendar_layout.count():
+            item = self.actions_calendar_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        self.actions_columns = []
+        
+        # Parcourir les acteurs et créer une colonne pour chacun
+        by_actor = actions_data.get('by_actor', {})
+        
+        for actor_name in sorted(by_actor.keys(), key=str.lower):
+            clients = by_actor[actor_name]
+            
+            # Créer une colonne pour cet acteur
+            column = self._create_actor_column(actor_name)
+            self.actions_columns.append(column)
+            self.actions_calendar_layout.addWidget(column)
+            
+            # Ajouter chaque client en dessous
+            for client_info in clients:
+                client_label = QLabel(client_info['client_name'])
+                client_label.setStyleSheet("""
+                    background-color: #fff;
+                    border-left: 3px solid #ffc107;
+                    padding: 6px;
+                    margin: 3px 0;
+                    font-size: 9pt;
+                    border-radius: 3px;
+                """)
+                client_label.setWordWrap(True)
+                client_label.setCursor(Qt.CursorShape.PointingHandCursor)
+                client_label.setToolTip(f"Projet #{client_info['id_projet']}")
+                
+                # Stocker l'id_projet
+                client_label.setProperty('id_projet', client_info['id_projet'])
+                
+                # Retirer le stretch avant d'ajouter
+                if column.clients_layout.count() > 0:
+                    last_item = column.clients_layout.itemAt(column.clients_layout.count() - 1)
+                    if last_item.spacerItem():
+                        column.clients_layout.removeItem(last_item)
+                
+                column.clients_layout.addWidget(client_label)
+                column.clients_layout.addStretch()
+        
+        # Ajouter une colonne "VIDE" (rouge) s'il y a des clients sans acteur
+        empty_clients = actions_data.get('empty', [])
+        if empty_clients:
+            # Créer une colonne spéciale pour VIDE avec style rouge
+            column = QFrame()
+            column.setFrameShape(QFrame.Shape.StyledPanel)
+            column.setStyleSheet("""
+                QFrame {
+                    background-color: #f8d7da;
+                    border: 2px solid #dc3545;
+                    border-radius: 5px;
+                }
+            """)
+            column.setMinimumWidth(150)
+            column.setMaximumWidth(200)
+            
+            layout = QVBoxLayout(column)
+            layout.setSpacing(5)
+            layout.setContentsMargins(10, 10, 10, 10)
+            
+            # En-tête : VIDE
+            actor_label = QLabel("⚠️ VIDE")
+            actor_label.setStyleSheet("font-weight: bold; font-size: 11pt; color: #721c24;")
+            actor_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            actor_label.setWordWrap(True)
+            layout.addWidget(actor_label)
+            
+            # Séparateur
+            separator = QFrame()
+            separator.setFrameShape(QFrame.Shape.HLine)
+            separator.setStyleSheet("background-color: #dc3545; max-height: 2px;")
+            layout.addWidget(separator)
+            
+            # Zone pour les clients (liste)
+            clients_container = QWidget()
+            clients_layout = QVBoxLayout(clients_container)
+            clients_layout.setSpacing(5)
+            clients_layout.setContentsMargins(0, 0, 0, 0)
+            clients_layout.addStretch()
+            
+            layout.addWidget(clients_container)
+            
+            # Stocker le layout des clients
+            column.clients_layout = clients_layout
+            column.clients_data = []
+            
+            self.actions_columns.append(column)
+            self.actions_calendar_layout.addWidget(column)
+            
+            # Ajouter chaque client sans acteur
+            for client_info in empty_clients:
+                client_label = QLabel(client_info['client_name'])
+                client_label.setStyleSheet("""
+                    background-color: #fff;
+                    border-left: 3px solid #dc3545;
+                    padding: 6px;
+                    margin: 3px 0;
+                    font-size: 9pt;
+                    border-radius: 3px;
+                """)
+                client_label.setWordWrap(True)
+                client_label.setCursor(Qt.CursorShape.PointingHandCursor)
+                client_label.setToolTip(f"Projet #{client_info['id_projet']} - Aucun acteur assigné")
+                
+                # Stocker l'id_projet
+                client_label.setProperty('id_projet', client_info['id_projet'])
+                
+                # Retirer le stretch avant d'ajouter
+                if column.clients_layout.count() > 0:
+                    last_item = column.clients_layout.itemAt(column.clients_layout.count() - 1)
+                    if last_item.spacerItem():
+                        column.clients_layout.removeItem(last_item)
+                
+                column.clients_layout.addWidget(client_label)
+                column.clients_layout.addStretch()
+        
+        # Ajouter un stretch à la fin pour pousser les colonnes vers la gauche
+        self.actions_calendar_layout.addStretch()

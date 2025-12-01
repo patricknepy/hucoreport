@@ -305,8 +305,9 @@ D:\DEV\Huco_Report\
 ├── .git\                         ← Historique Git (NE PAS SUPPRIMER !)
 ├── A_LIRE_EN_PREMIER.md          ← Reprise du code
 ├── CHANGELOG.md                  ← Historique des versions
-├── GUIDE_GIT.md                  ← Guide complet Git (17 pages)
-├── GIT_RESUME.md                 ← Ce fichier (résumé rapide)
+├── docs/
+│   ├── GUIDE_GIT.md              ← Guide complet Git (17 pages)
+│   └── GIT_RESUME.md             ← Ce fichier (résumé rapide)
 ├── BUILD.bat                     ← Build simple
 ├── BUILD_VERSIONED.bat           ← Build professionnel ⭐
 ├── LANCER.bat                    ← Lancer en développement

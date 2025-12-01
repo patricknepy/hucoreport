@@ -30,6 +30,7 @@ mkdir "dist\HucoReport\config"
 mkdir "dist\HucoReport\img"
 mkdir "dist\HucoReport\data"
 mkdir "dist\HucoReport\import"
+mkdir "dist\HucoReport\logs"
 
 copy "config\excel_schema.json" "dist\HucoReport\config\"
 copy "img\cropped-logo-groupe-huco.webp" "dist\HucoReport\img\"

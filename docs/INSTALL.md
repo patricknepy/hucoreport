@@ -84,7 +84,7 @@ pip install pyinstaller
 pyinstaller --onefile --windowed --name HucoReport main.py
 
 # Build avancé avec icône et données
-pyinstaller --onefile --windowed --name HucoReport --icon=assets/icon.ico --add-data "src/config/rules.json;src/config" main.py
+pyinstaller --onefile --windowed --name HucoReport --icon=assets/icon.ico --add-data "config/excel_schema.json;config" main.py
 ```
 
 ### Trouver l'exécutable

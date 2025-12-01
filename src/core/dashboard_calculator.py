@@ -44,6 +44,7 @@ class DashboardCalculator:
             "dispositif_expandable": self._count_dispositif_expandable(week_number),
             "warning_vision_client": self._count_warning_client(week_number),
             "warning_vision_internal": self._count_warning_internal(week_number),
+            "pct_projects_with_warning": self._calculate_pct_projects_with_warning(week_number),
             "dlic_this_week": self._count_dlic_this_week(week_number),
             "dli_this_week": self._count_dli_this_week(week_number),
             "dlic_overdue": self._count_dlic_overdue(week_number),
@@ -112,29 +113,74 @@ class DashboardCalculator:
             (week,)
         ) or 0
     
-    def _count_dlic_this_week(self, week: int) -> int:
-        """Compte les DLIC à traiter cette semaine (non dépassées)."""
+    def _count_projects_with_warning(self, week: int) -> int:
+        """
+        Compte les projets actifs avec au moins un warning (P ou Q ou les deux).
+        Un projet avec P et Q compte pour 1 (pas 2).
+        """
         return self.db.execute_scalar(
-            """SELECT COUNT(*) FROM projects
+            """SELECT COUNT(DISTINCT id_projet) FROM projects 
+               WHERE week_number = ? 
+               AND status = 'EN COURS'
+               AND (LOWER(vision_client) LIKE '%warning%' 
+                    OR LOWER(vision_internal) LIKE '%warning%'
+                    OR vision_client LIKE '%WARNING%'
+                    OR vision_internal LIKE '%WARNING%')""",
+            (week,)
+        ) or 0
+    
+    def _calculate_pct_projects_with_warning(self, week: int) -> float:
+        """
+        Calcule le pourcentage de projets actifs avec au moins un warning.
+        
+        Returns:
+            Pourcentage arrondi à 1 décimale (ex: 23.5)
+        """
+        total_active = self._count_active(week)
+        if total_active == 0:
+            return 0.0
+        
+        projects_with_warning = self._count_projects_with_warning(week)
+        pct = (projects_with_warning / total_active) * 100
+        return round(pct, 1)
+    
+    def _count_dlic_this_week(self, week: int) -> int:
+        """
+        Compte les DLIC à traiter : cette semaine + dépassées.
+        Un projet ne compte qu'une fois (pas de double comptage).
+        """
+        return self.db.execute_scalar(
+            """SELECT COUNT(DISTINCT id_projet) FROM projects
                WHERE week_number = ?
                AND status = 'EN COURS'
                AND dlic IS NOT NULL
-               AND dlic >= date('now')
-               AND dlic BETWEEN date('now', 'weekday 0', '-6 days')
-                            AND date('now', 'weekday 0')""",
+               AND (
+                   -- DLIC dépassées
+                   dlic < date('now')
+                   OR
+                   -- DLIC cette semaine (jusqu'à dimanche)
+                   (dlic >= date('now') AND dlic BETWEEN date('now', 'weekday 0', '-6 days') AND date('now', 'weekday 0'))
+               )""",
             (week,)
         ) or 0
     
     def _count_dli_this_week(self, week: int) -> int:
-        """Compte les DLI à traiter cette semaine (non dépassées)."""
+        """
+        Compte les DLI à traiter : cette semaine + dépassées.
+        Un projet ne compte qu'une fois (pas de double comptage).
+        """
         return self.db.execute_scalar(
-            """SELECT COUNT(*) FROM projects
+            """SELECT COUNT(DISTINCT id_projet) FROM projects
                WHERE week_number = ?
                AND status = 'EN COURS'
                AND dli IS NOT NULL
-               AND dli >= date('now')
-               AND dli BETWEEN date('now', 'weekday 0', '-6 days')
-                            AND date('now', 'weekday 0')""",
+               AND (
+                   -- DLI dépassées
+                   dli < date('now')
+                   OR
+                   -- DLI cette semaine (jusqu'à dimanche)
+                   (dli >= date('now') AND dli BETWEEN date('now', 'weekday 0', '-6 days') AND date('now', 'weekday 0'))
+               )""",
             (week,)
         ) or 0
     
@@ -267,24 +313,39 @@ class DashboardCalculator:
     def get_warnings_by_bu(self, week: int) -> List[Dict[str, Any]]:
         """
         Récupère le nombre de warnings par BU.
+        Chaque warning compte séparément : un projet avec P et Q compte pour 2 warnings.
         
         Returns:
             Liste de dicts: [{bu, count}]
         """
+        # Utiliser UNION ALL pour compter chaque warning séparément
         query = """
             SELECT 
                 COALESCE(bu, 'Non défini') as bu,
                 COUNT(*) as count
-            FROM projects
-            WHERE week_number = ?
-            AND status = 'EN COURS'
-            AND (LOWER(vision_client) LIKE '%warning%' OR LOWER(vision_internal) LIKE '%warning%')
+            FROM (
+                -- Warnings vision client (colonne P)
+                SELECT bu
+                FROM projects
+                WHERE week_number = ?
+                AND status = 'EN COURS'
+                AND (LOWER(vision_client) LIKE '%warning%' OR vision_client LIKE '%WARNING%')
+                
+                UNION ALL
+                
+                -- Warnings vision interne (colonne Q)
+                SELECT bu
+                FROM projects
+                WHERE week_number = ?
+                AND status = 'EN COURS'
+                AND (LOWER(vision_internal) LIKE '%warning%' OR vision_internal LIKE '%WARNING%')
+            )
             GROUP BY bu
             ORDER BY LOWER(bu) ASC
         """
         
         cursor = self.db.conn.cursor()
-        cursor.execute(query, (week,))
+        cursor.execute(query, (week, week))
         rows = cursor.fetchall()
         
         return [dict(row) for row in rows]
@@ -331,5 +392,65 @@ class DashboardCalculator:
         return {
             'with_actor': with_actor,
             'empty': empty_count
+        }
+    
+    def get_actions_by_actor_with_clients(self, week: int) -> Dict[str, Any]:
+        """
+        Récupère les actions par acteur avec les noms des clients (projets avec warning).
+        Format pour affichage style calendrier.
+        
+        Returns:
+            Dict avec 'by_actor' (dict acteur -> liste de clients) et 'empty' (liste de clients sans acteur)
+        """
+        # Actions avec acteur défini - avec noms des clients
+        query_with_actor = """
+            SELECT 
+                next_actor,
+                client_name,
+                id_projet
+            FROM projects
+            WHERE week_number = ?
+            AND status = 'EN COURS'
+            AND (LOWER(vision_client) LIKE '%warning%' OR LOWER(vision_internal) LIKE '%warning%')
+            AND next_actor IS NOT NULL
+            AND next_actor != ''
+            ORDER BY LOWER(next_actor) ASC, client_name ASC
+        """
+        
+        cursor = self.db.conn.cursor()
+        cursor.execute(query_with_actor, (week,))
+        rows = cursor.fetchall()
+        
+        # Organiser par acteur
+        by_actor = {}
+        for row in rows:
+            actor = row['next_actor']
+            client_name = row['client_name']
+            if actor not in by_actor:
+                by_actor[actor] = []
+            by_actor[actor].append({
+                'client_name': client_name,
+                'id_projet': row['id_projet']
+            })
+        
+        # Actions sans acteur (vides)
+        query_empty = """
+            SELECT client_name, id_projet
+            FROM projects
+            WHERE week_number = ?
+            AND status = 'EN COURS'
+            AND (LOWER(vision_client) LIKE '%warning%' OR LOWER(vision_internal) LIKE '%warning%')
+            AND (next_actor IS NULL OR next_actor = '')
+            ORDER BY client_name ASC
+        """
+        
+        cursor.execute(query_empty, (week,))
+        empty_rows = cursor.fetchall()
+        empty_clients = [{'client_name': row['client_name'], 'id_projet': row['id_projet']} 
+                        for row in empty_rows]
+        
+        return {
+            'by_actor': by_actor,
+            'empty': empty_clients
         }
 

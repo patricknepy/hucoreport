@@ -16,18 +16,9 @@ import logging
 import sys
 import os
 
-logging.basicConfig(level=logging.INFO)
+from .paths import get_application_path, get_data_directory
+
 logger = logging.getLogger(__name__)
-
-
-def get_application_path():
-    """Retourne le chemin de base de l'application (compatible .exe)."""
-    if getattr(sys, 'frozen', False):
-        # Mode .exe (PyInstaller)
-        return Path(sys.executable).parent
-    else:
-        # Mode développement
-        return Path(__file__).parent.parent.parent
 
 
 class Database:
@@ -40,10 +31,19 @@ class Database:
         Args:
             db_path: Chemin vers le fichier de base de données
         """
-        # Utiliser un chemin absolu basé sur l'emplacement de l'exe
-        app_path = get_application_path()
-        self.db_path = app_path / db_path
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        # Utiliser le dossier data dédié (AppData en .exe, data/ en dev)
+        data_dir = get_data_directory()
+        
+        # Construire le chemin de la base de données dans le dossier data
+        db_filename = Path(db_path).name  # Extraire juste le nom du fichier (cache.db)
+        self.db_path = data_dir / db_filename
+        
+        # Créer le dossier si nécessaire (simple, sans logs au démarrage)
+        data_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Convertir en chemin absolu string pour SQLite
+        self.db_path_str = str(self.db_path.resolve())
+        
         self.conn: Optional[sqlite3.Connection] = None
         self._connect()
         self._create_tables()
@@ -51,15 +51,22 @@ class Database:
     def _connect(self):
         """Établit la connexion à la base de données."""
         try:
+            # Utiliser le chemin absolu string pour SQLite
+            logger.info(f"Tentative de connexion a : {self.db_path_str}")
+            logger.info(f"Dossier parent existe : {self.db_path.parent.exists()}")
+            
             self.conn = sqlite3.connect(
-                self.db_path,
+                self.db_path_str,
                 check_same_thread=False,
                 detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
             )
             self.conn.row_factory = sqlite3.Row
-            logger.info(f"Connexion a la base : {self.db_path}")
+            logger.info(f"Connexion reussie a la base : {self.db_path_str}")
         except sqlite3.Error as e:
             logger.error(f"Erreur connexion base : {e}")
+            logger.error(f"Chemin tente : {self.db_path_str}")
+            logger.error(f"Dossier parent : {self.db_path.parent}")
+            logger.error(f"Dossier parent existe : {self.db_path.parent.exists()}")
             raise
     
     def _create_tables(self):
@@ -191,6 +198,7 @@ class Database:
             
         except sqlite3.Error as e:
             logger.error(f"Erreur insertion projet : {e}")
+            logger.error(f"Donnees projet : {project_data}")
             raise
     
     def insert_projects_batch(self, projects: List[Dict[str, Any]]):
@@ -204,11 +212,25 @@ class Database:
             cursor = self.conn.cursor()
             cursor.execute("BEGIN TRANSACTION")
             
+            inserted_count = 0
+            skipped_count = 0
+            
             for project in projects:
-                self.insert_project(project)
+                # Vérifier les champs obligatoires avant insertion
+                if project.get('id_projet') is None or project.get('bu') is None or project.get('client_name') is None:
+                    skipped_count += 1
+                    logger.warning(f"Projet ignore (champs obligatoires manquants) : {project.get('id_projet', 'N/A')}")
+                    continue
+                
+                try:
+                    self.insert_project(project)
+                    inserted_count += 1
+                except Exception as e:
+                    logger.error(f"Erreur insertion projet {project.get('id_projet', 'N/A')} : {e}")
+                    skipped_count += 1
             
             cursor.execute("COMMIT")
-            logger.info(f"{len(projects)} projets inseres")
+            logger.info(f"{inserted_count} projets inseres, {skipped_count} ignores")
             
         except sqlite3.Error as e:
             cursor.execute("ROLLBACK")

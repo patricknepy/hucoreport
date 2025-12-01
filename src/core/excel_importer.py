@@ -18,18 +18,9 @@ import sys
 from .excel_validator import ExcelValidator
 from .excel_parser import ExcelParser
 from .database import Database
+from .paths import get_application_path
 
 logger = logging.getLogger(__name__)
-
-
-def get_application_path():
-    """Retourne le chemin de base de l'application (compatible .exe)."""
-    if getattr(sys, 'frozen', False):
-        # Mode .exe (PyInstaller)
-        return Path(sys.executable).parent
-    else:
-        # Mode développement
-        return Path(__file__).parent.parent.parent
 
 
 class ExcelImporter:
