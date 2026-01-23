@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Tests
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Data & Cache
+data/cache.db
+data/test_cache.db
+data/uploads/*
+!data/uploads/.gitkeep
+logs/
+
+# Import folder (fichiers Excel)
+import/*.xlsx
+import/*.xls
+
+# Scripts temporaires
+analyze_columns.py
+
+# Excel temporaires
+~$*.xlsx
+~$*.xls
+
+# Configuration locale
+.env
+config/local_settings.py
+
+# Build
+*.spec
+build/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
