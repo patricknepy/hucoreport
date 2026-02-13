@@ -43,6 +43,11 @@ data/test_cache.db
 data/uploads/*
 !data/uploads/.gitkeep
 logs/
+cache.db
+
+# Fichiers Excel de test
+*.xlsx
+!config/*.xlsx
 
 # Import folder (fichiers Excel)
 import/*.xlsx
@@ -67,4 +72,5 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+nul
 

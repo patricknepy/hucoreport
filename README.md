@@ -73,35 +73,40 @@ Transformer le processus manuel de traitement Excel en un workflow automatisé, 
 ### Structure du Projet
 
 ```
-huco_report/
+Huco_Report/
 ├── src/
-│   ├── gui/                    # Interface graphique
-│   │   ├── main_window.py     # Fenêtre principale
-│   │   ├── dashboard.py       # Tableaux de bord
-│   │   └── report_builder.py  # Générateur de rapports
+│   ├── gui/                        # Interface graphique (PyQt6)
+│   │   ├── main_window.py         # Fenêtre principale + 6 onglets
+│   │   ├── dashboard_tab.py       # Onglet Dashboard (KPI + graphiques)
+│   │   ├── kpi_tab.py             # Onglet KPIs (santé + commercial)
+│   │   ├── analysis_tab.py        # Onglet Analyse (évolution warnings)
+│   │   ├── exploitation_tab.py    # Onglet Exploitation (tableau éditable)
+│   │   └── import_dialog.py       # Dialog d'import Excel
 │   │
-│   ├── core/                   # Logique métier
-│   │   ├── excel_parser.py    # Import & parsing Excel
-│   │   ├── data_analyzer.py   # Tableaux croisés dynamiques
-│   │   ├── rule_engine.py     # Identification intelligente
-│   │   └── data_model.py      # Modèle de données
+│   ├── core/                       # Logique métier
+│   │   ├── database.py            # Gestion SQLite (46 champs)
+│   │   ├── excel_parser.py        # Import & parsing Excel
+│   │   ├── excel_validator.py     # Validation structure Excel
+│   │   ├── excel_importer.py      # Orchestration import
+│   │   ├── commercial_parser.py   # Parser fichier commercial
+│   │   └── dashboard_calculator.py # Calculs KPI
 │   │
-│   ├── reporting/              # Génération de rapports
-│   │   ├── generator.py       # Génération rapports
-│   │   ├── email_service.py   # Envoi emails
-│   │   └── scheduler.py       # Automatisation
-│   │
-│   └── config/                 # Configuration
-│       └── settings.py        # Paramètres globaux
+│   └── config/                     # Configuration
+│       └── settings.py            # Paramètres globaux (version, etc.)
 │
-├── data/                       # Données & cache
-│   ├── templates/             # Templates de rapports
-│   └── cache.db              # Base de données SQLite
+├── config/
+│   └── excel_schema.json          # Schéma validation Excel (46 champs)
 │
-├── tests/                     # Tests unitaires
-├── docs/                      # Documentation détaillée
-├── main.py                    # Point d'entrée
-└── requirements.txt           # Dépendances Python
+├── data/                           # Données & cache
+│   ├── cache.db                   # Base de données SQLite
+│   └── templates/                 # Templates de rapports
+│
+├── documentation/                  # Documentation détaillée
+├── img/                           # Images et logo
+├── main.py                        # Point d'entrée
+├── requirements.txt               # Dépendances Python
+├── BUILD.bat                      # Script build .exe
+└── LANCER.bat                     # Script lancement dev
 ```
 
 ---
@@ -153,19 +158,25 @@ Le fichier sera généré dans `dist/HucoReport.exe` (~50MB)
 
 ## 🎨 Interface Utilisateur
 
-L'interface est divisée en 4 onglets principaux :
+L'interface est divisée en **6 onglets** principaux :
 
 ### 📊 Dashboard
-Vue d'ensemble des données avec indicateurs clés de performance
+Vue d'ensemble des données avec indicateurs clés de performance (KPI, graphiques par BU, par CP)
 
-### 📈 Analyse
-Tableaux croisés dynamiques, filtres et exploration des données
+### 📈 KPIs
+Indicateurs de santé du portefeuille et performance commerciale (pipeline pondéré, taux régie/build)
+
+### 📉 Analyse
+Graphiques d'évolution des warnings par semaine et par mois
+
+### 📝 Exploitation
+Tableau éditable pour modifier les données directement (sans réimport Excel)
 
 ### 📄 Rapports
-Génération et envoi de rapports professionnels
+Génération et envoi de rapports professionnels (en développement)
 
 ### ⚙️ Automatisation
-Configuration des tâches automatiques et monitoring des deadlines
+Configuration des tâches automatiques et monitoring des deadlines (en développement)
 
 ---
 
@@ -236,11 +247,17 @@ pytest tests/ -v
 
 ## 📝 Changelog
 
+### Version 0.7.0 (Janvier 2026)
+- ✨ **Onglet Exploitation** : Tableau éditable avec modification directe en base
+- 📊 **Onglet KPIs** : Indicateurs santé portefeuille + performance commerciale
+- 🔧 Amélioration du parser commercial (pipeline pondéré)
+- 📝 Mise à jour complète de la documentation
+
 ### Version 1.0.0 (Novembre 2025)
-- ✨ Interface graphique complète
+- ✨ Interface graphique complète (4 onglets)
 - 📊 Import et analyse Excel
-- 📄 Génération de rapports
-- ⚙️ Système d'automatisation
+- 📄 Génération de rapports (placeholder)
+- ⚙️ Système d'automatisation (placeholder)
 - 🎯 Première version stable
 
 ---

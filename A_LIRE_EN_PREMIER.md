@@ -1,7 +1,7 @@
 # 📌 À LIRE EN PREMIER - Reprise du Code
 
-**Date** : 30 novembre 2025  
-**Projet** : Huco Report - Humans Connexion  
+**Date** : 30 janvier 2026
+**Projet** : Huco Report - Humans Connexion
 **Statut** : En développement actif
 
 ---
@@ -48,11 +48,26 @@
   - DLIC vides
 - ✅ **RDV Client** cette semaine (liste cliquable)
 
-### **4. Interface Professionnelle** 🎨
+### **4. Onglet Exploitation** 📝 (NOUVEAU - Janvier 2026)
+- ✅ Tableau éditable avec 13 colonnes (ID, Client, BU, Statut, Chef Projet, Vision Client/Interne, etc.)
+- ✅ Modification directe en base de données (double-clic pour éditer)
+- ✅ Ajout de nouveaux projets (bouton "+ Nouveau projet")
+- ✅ Recherche/filtrage par client, BU, chef de projet
+- ✅ Sélecteur de semaine
+- ✅ Coloration conditionnelle (warnings en rouge/orange, statuts colorés)
+- ✅ Sauvegarde avec confirmation et surlignage des modifications
+
+### **5. Onglet KPIs** 📊 (NOUVEAU - Janvier 2026)
+- ✅ Indicateurs de santé du portefeuille
+- ✅ KPIs commerciaux avec chargement fichier input.xlsx
+- ✅ Pipeline pondéré (signed, agreed, likely, specul)
+- ✅ Taux Régie/Build
+
+### **6. Interface Professionnelle** 🎨
 - ✅ Plein écran au lancement
 - ✅ Logo Humans Connexion intégré
 - ✅ Section import compacte et discrète
-- ✅ 4 onglets : Dashboard, Analyse, Rapports, Automatisation
+- ✅ 6 onglets : Dashboard, KPIs, Analyse, Exploitation, Rapports, Automatisation
 - ✅ Graphiques matplotlib (barres horizontales)
 - ✅ Responsive design
 
@@ -106,13 +121,24 @@ Graphiques triés par ordre alphabétique
 
 ## 🔧 CE QUI RESTE À FAIRE
 
-### **Priorité 1 : Onglet ANALYSE** 📈
+### **✅ TERMINÉ : Onglet EXPLOITATION** 📝
 
-#### **Grille de données**
-- [ ] Tableau Excel-like avec toutes les colonnes
+#### **Grille de données éditable** (Implémenté dans `exploitation_tab.py`)
+- [x] Tableau Excel-like avec 13 colonnes éditables
+- [x] Modification directe en base de données
+- [x] Recherche globale (filtre dynamique)
+- [x] Ajout de nouveaux projets
+- [x] Sélecteur de semaine
+- [x] Coloration conditionnelle (warnings, statuts)
+- [x] Sauvegarde avec confirmation
+
+---
+
+### **Priorité 1 : Améliorations Onglet ANALYSE** 📈
+
+#### **Fonctionnalités restantes**
 - [ ] Tri par colonne (clic sur en-tête)
 - [ ] Filtres par colonne (dropdown comme Excel)
-- [ ] Recherche globale
 - [ ] Export Excel/CSV
 - [ ] Double-clic sur ligne → Fiche projet
 
@@ -342,28 +368,24 @@ del data\cache.db
 
 ---
 
-## 📂 Fichiers Modifiés Aujourd'hui (30/11/2025)
+## 📂 Fichiers Modifiés Récemment (Janvier 2026)
 
-### **Backend**
-- `src/core/database.py` - Chemins absolus + dispositif_expandable TEXT
-- `src/core/excel_validator.py` - Validation structure
-- `src/core/excel_parser.py` - Parsing + conversion dates intelligentes
-- `src/core/excel_importer.py` - Orchestration complète
+### **Backend (27-29 Janvier 2026)**
+- `src/core/database.py` - Chemins absolus améliorés pour .exe
+- `src/core/commercial_parser.py` - Parser commercial avec pondérations pipeline
 - `src/core/dashboard_calculator.py` - Calculs KPI + dispositifs + graphiques
-- `config/excel_schema.json` - Schéma 46 champs + corrections
 
-### **Frontend**
-- `src/gui/main_window.py` - Header avec logo + import compact + plein écran
-- `src/gui/dashboard_tab.py` - 4 graphiques matplotlib + 3 colonnes
-- `src/gui/import_dialog.py` - Indicateurs de validation pertinents
+### **Frontend (27 Janvier 2026)**
+- `src/gui/main_window.py` - 6 onglets (ajout KPIs + Exploitation)
+- `src/gui/exploitation_tab.py` - **NOUVEAU** Tableau éditable complet
+- `src/gui/kpi_tab.py` - KPIs santé portefeuille + commerciaux
 
 ### **Distribution**
 - `BUILD.bat` - Script build .exe
 - `LANCER.bat` - Lancement dev
-- `GUIDE_DISTRIBUTION.md` - Guide complet
 
-### **Documentation**
-- Tous les docs/ à jour (7 fichiers)
+### **Documentation (30 Janvier 2026)**
+- Mise à jour des docs pour refléter les nouveaux onglets
 
 ---
 
@@ -373,14 +395,16 @@ del data\cache.db
 
 1. ✅ Import Excel automatique
 2. ✅ Dashboard KPI temps réel
-3. ⏳ Analyse de données flexible
-4. ⏳ Génération rapports PDF/Excel
-5. ⏳ Envoi email automatique
-6. ⏳ Assistant IA (optionnel mais impressionnant)
-7. ⏳ Monitoring deadline
-8. ✅ Distribution .exe autonome
+3. ✅ Onglet KPIs (santé portefeuille + commerciaux)
+4. ✅ Onglet Exploitation (tableau éditable)
+5. ⏳ Analyse de données avancée (tri, filtres, export)
+6. ⏳ Génération rapports PDF/Excel
+7. ⏳ Envoi email automatique
+8. ⏳ Assistant IA (optionnel mais impressionnant)
+9. ⏳ Monitoring deadline
+10. ✅ Distribution .exe autonome
 
-**Progression : ~40% terminé** 🚀
+**Progression : ~55% terminé** 🚀
 
 ---
 

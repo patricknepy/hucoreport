@@ -16,6 +16,10 @@ from pathlib import Path
 from src.config.settings import APP_NAME, APP_VERSION, COMPANY_NAME
 from src.gui.dashboard_tab import DashboardTab
 from src.gui.analysis_tab import AnalysisTab
+from src.gui.kpi_tab import KPITab
+from src.gui.exploitation_tab import ExploitationTab
+from src.gui.cdp_tab import CDPTab
+from src.gui.warnings_tab import WarningsTab
 from src.gui.import_dialog import ImportDialog
 from src.core.excel_importer import ExcelImporter
 
@@ -37,7 +41,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.importer = ExcelImporter()
         self.dashboard_tab = None
+        self.kpi_tab = None
         self.analysis_tab = None
+        self.exploitation_tab = None
+        self.cdp_tab = None
+        self.warnings_tab = None
         self.init_ui()
         self.showMaximized()  # Plein écran au démarrage
 
@@ -52,20 +60,16 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
-        # Layout principal (plus compact)
+        # Layout principal (COMPACT)
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setSpacing(8)
-        main_layout.setContentsMargins(8, 8, 8, 8)
+        main_layout.setSpacing(4)
+        main_layout.setContentsMargins(4, 4, 4, 4)
 
-        # En-tête avec titre et logo
+        # En-tête compact avec titre et logo
         header = self.create_header()
         main_layout.addWidget(header)
 
-        # Zone d'import de fichier
-        import_section = self.create_import_section()
-        main_layout.addWidget(import_section)
-
-        # Onglets principaux
+        # Onglets principaux (import via menu Fichier)
         tabs = self.create_tabs()
         main_layout.addWidget(tabs, stretch=1)
 
@@ -79,72 +83,43 @@ class MainWindow(QMainWindow):
         self.apply_stylesheet()
 
     def create_header(self):
-        """Crée l'en-tête de l'application"""
+        """Crée l'en-tête compact de l'application"""
         header_widget = QWidget()
         header_layout = QHBoxLayout(header_widget)
-        header_layout.setContentsMargins(20, 10, 20, 10)
+        header_layout.setContentsMargins(10, 2, 10, 2)
 
-        # Logo
+        # Logo (taille réduite)
         from PyQt6.QtGui import QPixmap
 
         logo_label = QLabel()
+        logo_size = 40  # Réduit de 70 à 40
         app_path = get_application_path()
-        # Chemin direct depuis la racine du projet
         logo_path = Path(__file__).parent.parent.parent / "img" / "cropped-logo-groupe-huco.webp"
 
         if logo_path.exists():
-            pixmap = QPixmap(str(logo_path.resolve()))  # Utiliser resolve() pour chemin absolu
+            pixmap = QPixmap(str(logo_path.resolve()))
             if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(70, 70, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                scaled_pixmap = pixmap.scaled(logo_size, logo_size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 logo_label.setPixmap(scaled_pixmap)
-            else:
-                # PyQt6 ne peut peut-être pas charger .webp, essayer de convertir
-                logo_label.setMinimumWidth(70)
-                logo_label.setMinimumHeight(70)
         else:
-            # Essayer avec app_path
             alt_path = app_path / "img" / "cropped-logo-groupe-huco.webp"
             if alt_path.exists():
                 pixmap = QPixmap(str(alt_path.resolve()))
                 if not pixmap.isNull():
-                    scaled_pixmap = pixmap.scaled(70, 70, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    scaled_pixmap = pixmap.scaled(logo_size, logo_size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                     logo_label.setPixmap(scaled_pixmap)
-                else:
-                    logo_label.setMinimumWidth(70)
-                    logo_label.setMinimumHeight(70)
-            else:
-                logo_label.setMinimumWidth(70)
-                logo_label.setMinimumHeight(70)
-
-        # Taille minimale pour le logo (au cas où)
-        if logo_label.pixmap() is None:
-            logo_label.setMinimumWidth(70)
-            logo_label.setMinimumHeight(70)
 
         header_layout.addWidget(logo_label)
 
-        # Titres
-        titles_layout = QVBoxLayout()
-
-        # Titre principal
-        title_label = QLabel(f"{APP_NAME}")
+        # Titre compact (une seule ligne)
+        title_label = QLabel(f"{APP_NAME} - {COMPANY_NAME}")
         title_font = QFont()
-        title_font.setPointSize(20)
+        title_font.setPointSize(14)
         title_font.setBold(True)
         title_label.setFont(title_font)
-        title_label.setStyleSheet("color: #2196F3;")
+        title_label.setStyleSheet("color: #2196F3; margin-left: 10px;")
 
-        # Sous-titre
-        subtitle_label = QLabel(f"Outil de Gestion de Rapports de Performance - {COMPANY_NAME}")
-        subtitle_font = QFont()
-        subtitle_font.setPointSize(9)
-        subtitle_label.setFont(subtitle_font)
-        subtitle_label.setStyleSheet("color: #666;")
-
-        titles_layout.addWidget(title_label)
-        titles_layout.addWidget(subtitle_label)
-
-        header_layout.addLayout(titles_layout)
+        header_layout.addWidget(title_label)
         header_layout.addStretch()
 
         return header_widget
@@ -205,15 +180,31 @@ class MainWindow(QMainWindow):
         dashboard_tab = self.create_dashboard_tab()
         tabs.addTab(dashboard_tab, "Dashboard")
 
-        # Onglet 2 : Analyse
+        # Onglet 2 : KPIs
+        kpi_tab = self.create_kpi_tab()
+        tabs.addTab(kpi_tab, "KPIs")
+
+        # Onglet 3 : Analyse
         analysis_tab = self.create_analysis_tab()
         tabs.addTab(analysis_tab, "Analyse")
 
-        # Onglet 3 : Rapports
+        # Onglet 4 : Exploitation
+        exploitation_tab = self.create_exploitation_tab()
+        tabs.addTab(exploitation_tab, "Exploitation")
+
+        # Onglet 5 : CDP (Chefs de Projet)
+        cdp_tab = self.create_cdp_tab()
+        tabs.addTab(cdp_tab, "CDP")
+
+        # Onglet 6 : Warnings
+        warnings_tab = self.create_warnings_tab()
+        tabs.addTab(warnings_tab, "Warnings")
+
+        # Onglet 7 : Rapports
         reports_tab = self.create_reports_tab()
         tabs.addTab(reports_tab, "Rapports")
 
-        # Onglet 4 : Automatisation
+        # Onglet 8 : Automatisation
         automation_tab = self.create_automation_tab()
         tabs.addTab(automation_tab, "Automatisation")
 
@@ -224,10 +215,30 @@ class MainWindow(QMainWindow):
         self.dashboard_tab = DashboardTab()
         return self.dashboard_tab
 
+    def create_kpi_tab(self):
+        """Crée l'onglet KPIs"""
+        self.kpi_tab = KPITab()
+        return self.kpi_tab
+
     def create_analysis_tab(self):
         """Crée l'onglet Analyse avec les graphiques d'évolution des warnings"""
         self.analysis_tab = AnalysisTab()
         return self.analysis_tab
+
+    def create_exploitation_tab(self):
+        """Crée l'onglet Exploitation avec le tableau éditable"""
+        self.exploitation_tab = ExploitationTab()
+        return self.exploitation_tab
+
+    def create_cdp_tab(self):
+        """Crée l'onglet CDP (Chefs de Projet)"""
+        self.cdp_tab = CDPTab()
+        return self.cdp_tab
+
+    def create_warnings_tab(self):
+        """Crée l'onglet Warnings (synthèse des warnings)"""
+        self.warnings_tab = WarningsTab()
+        return self.warnings_tab
 
     def create_reports_tab(self):
         """Crée l'onglet Rapports"""
@@ -418,11 +429,17 @@ class MainWindow(QMainWindow):
                         f"Le dashboard a été mis à jour."
                     )
 
-                    # Rafraîchir le dashboard et l'analyse
+                    # Rafraîchir tous les onglets
                     if self.dashboard_tab:
                         self.dashboard_tab.load_available_weeks()
                     if self.analysis_tab:
                         self.analysis_tab.refresh_charts()
+                    if self.exploitation_tab:
+                        self.exploitation_tab.load_weeks()
+                    if self.cdp_tab:
+                        self.cdp_tab.load_available_weeks()
+                    if self.warnings_tab:
+                        self.warnings_tab.load_available_weeks()
                 else:
                     # Erreur d'import
                     error_msg = '\n'.join(import_result['errors'])

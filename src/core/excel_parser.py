@@ -324,13 +324,17 @@ class ExcelParser:
             'bu': (['bu'], 'TEXT', ['club']),
             'client_name': (['client'], 'TEXT', ['relation', 'satisfaction', 'échange', 'exchange']),
             'project_manager': (['chef', 'projet'], 'TEXT', ['direction']),
-            'vision_client': (['vision', 'client'], 'TEXT', []),
-            'vision_internal': (['vision', 'interne'], 'TEXT', []),
+            'vision_client': (['vision', 'client'], 'TEXT', ['commentaire']),
+            'vision_internal': (['vision', 'interne'], 'TEXT', ['commentaire']),
+            'comment_vision_client': (['commentaire', 'vision', 'client'], 'TEXT', []),
+            'comment_vision_internal': (['commentaire', 'vision', 'interne'], 'TEXT', []),
+            'upsell': (['upsell'], 'TEXT', []),
+            'crosssell': (['cros', 'sell'], 'TEXT', []),
             'next_actor': (['acteur'], 'TEXT', []),
             'dlic': (['dlic'], 'DATE', []),
             'dli': (['dli', 'limite', 'interne'], 'DATE', ['dlic']),
             'action_description': (['action'], 'TEXT', ['satisfaction']),
-            'technical_lead': (['resp', 'technique'], 'TEXT', []),
+            'technical_lead': (['dév', 'principal'], 'TEXT', []),
             'project_director': (['direction', 'projet'], 'TEXT', []),
             'project_phase': (['phase'], 'TEXT', []),
             'contract_type': (['type', 'contrat'], 'TEXT', []),
@@ -452,7 +456,11 @@ class ExcelParser:
 
         header_row = self.schema['header_row']
         data_start = self.schema['data_start_row']
-        data_end = self.schema['data_end_row']
+
+        # DÉTECTION DYNAMIQUE de la dernière ligne avec données
+        # On ne se limite plus à data_end_row du schéma (54) car les fichiers peuvent avoir plus de lignes
+        data_end = ws.max_row
+        logger.info(f"Onglet {sheet_name}: lecture lignes {data_start} à {data_end} (max_row détecté)")
 
         # DÉTECTION DYNAMIQUE des colonnes par leur en-tête
         logger.info(f"=== Détection colonnes pour {sheet_name} ===")
@@ -475,7 +483,31 @@ class ExcelParser:
             logger.info(f"Onglet {sheet_name} : {len(dynamic_mapping)} colonnes, critiques: {', '.join(found_critical)}")
 
         # Lire les lignes de données
+        # On s'arrête à la première ligne complètement vide (fin du tableau)
+        consecutive_empty = 0
         for row_idx in range(data_start, data_end + 1):
+            # Vérifier si ligne vide AVANT de parser
+            bu_cell = None
+            client_cell = None
+            for col_idx, col_info in dynamic_mapping.items():
+                if col_info['db_field'] == 'bu':
+                    bu_cell = ws.cell(row=row_idx, column=col_idx).value
+                elif col_info['db_field'] == 'client_name':
+                    client_cell = ws.cell(row=row_idx, column=col_idx).value
+
+            # Si BU et Client sont vides, c'est peut-être la fin du tableau
+            bu_empty = not bu_cell or (isinstance(bu_cell, str) and not bu_cell.strip())
+            client_empty = not client_cell or (isinstance(client_cell, str) and not client_cell.strip())
+
+            if bu_empty and client_empty:
+                consecutive_empty += 1
+                if consecutive_empty >= 3:  # 3 lignes vides consécutives = fin du tableau
+                    logger.info(f"Fin du tableau détectée ligne {row_idx - 2}")
+                    break
+                continue
+            else:
+                consecutive_empty = 0
+
             project = {'week_number': week_number}
 
             # Lire chaque colonne détectée
@@ -499,14 +531,15 @@ class ExcelParser:
             bu = project.get('bu')
             client_name = project.get('client_name')
 
-            # Si un des 3 champs obligatoires est None ou vide, on ignore la ligne
-            # (On vérifie après conversion car la conversion peut transformer des valeurs)
-            if id_projet is None:
+            # RÈGLE STRICTE : BU ET client_name doivent être renseignés
+            if not bu or (isinstance(bu, str) and not bu.strip()):
                 continue
-            if bu is None or (isinstance(bu, str) and not bu.strip()):
+            if not client_name or (isinstance(client_name, str) and not client_name.strip()):
                 continue
-            if client_name is None or (isinstance(client_name, str) and not client_name.strip()):
-                continue
+
+            # TOUJOURS utiliser row_idx comme ID unique (la colonne Number peut avoir des doublons)
+            # car certains onglets ont plusieurs sections avec numérotation qui redémarre à 1
+            project['id_projet'] = row_idx + (week_number * 1000)
 
             projects.append(project)
 

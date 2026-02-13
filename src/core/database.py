@@ -100,9 +100,11 @@ class Database:
                     nps_commercial INTEGER CHECK(nps_commercial BETWEEN -100 AND 100 OR nps_commercial IS NULL),
                     nps_project INTEGER CHECK(nps_project BETWEEN -100 AND 100 OR nps_project IS NULL),
 
-                    -- GROUPE 3 : PILOTAGE (9 champs)
+                    -- GROUPE 3 : PILOTAGE (13 champs)
                     vision_client TEXT,
                     vision_internal TEXT,
+                    comment_vision_client TEXT,
+                    comment_vision_internal TEXT,
                     risk_identified TEXT,
                     action_description TEXT,
                     next_actor TEXT,
@@ -110,6 +112,8 @@ class Database:
                     next_client_exchange DATE,
                     dlic DATE,
                     dli DATE,
+                    upsell TEXT,
+                    crosssell TEXT,
 
                     -- GROUPE 4 : ACTUALITÉS (3 champs)
                     news_project TEXT,
@@ -286,6 +290,52 @@ class Database:
             return result[0] if result else None
         except sqlite3.Error as e:
             logger.error(f"Erreur execution scalar : {e}")
+            raise
+
+    def execute_query(self, query: str, params: Tuple = ()) -> List[Dict[str, Any]]:
+        """
+        Exécute une requête SELECT et retourne une liste de dictionnaires.
+
+        Args:
+            query: Requête SQL
+            params: Paramètres de la requête
+
+        Returns:
+            Liste de dictionnaires (un par ligne)
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            # Convertir les Row en dictionnaires
+            result = []
+            for row in rows:
+                result.append(dict(row))
+
+            return result
+        except sqlite3.Error as e:
+            logger.error(f"Erreur execution query : {e}")
+            raise
+
+    def execute_update(self, query: str, params: Tuple = ()) -> int:
+        """
+        Exécute une requête INSERT, UPDATE ou DELETE.
+
+        Args:
+            query: Requête SQL
+            params: Paramètres de la requête
+
+        Returns:
+            Nombre de lignes affectées
+        """
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(query, params)
+            self.conn.commit()
+            return cursor.rowcount
+        except sqlite3.Error as e:
+            logger.error(f"Erreur execution update : {e}")
             raise
 
     def count_total_projects(self, week_number: int) -> int:

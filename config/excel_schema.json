@@ -3,7 +3,8 @@
   "description": "Schéma de référence du fichier Excel Suivi Hebdo Projet GDP HUCO",
   "header_row": 3,
   "data_start_row": 4,
-  "data_end_row": 54,
+  "data_end_row": 999,
+  "_comment_data_end": "OBSOLÈTE: Le parser détecte maintenant dynamiquement la dernière ligne",
   "sheet_pattern": "^S\\d+$",
   "columns": {
     "A": {

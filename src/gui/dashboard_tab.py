@@ -238,21 +238,20 @@ class DashboardTab(QWidget):
         separator.setStyleSheet("background-color: #FFA500; max-width: 3px;")
         main_layout.addWidget(separator)
 
-        # Graphiques à droite (2 colonnes)
+        # Graphiques à droite (2 colonnes, extensibles)
         right_layout = QHBoxLayout()
         right_layout.setSpacing(15)
         right_layout.setContentsMargins(10, 5, 10, 5)
 
         # Graphique Projets actifs par BU
         self.chart_bu = self._create_bar_chart("Projets actifs par BU")
-        right_layout.addWidget(self.chart_bu)
+        right_layout.addWidget(self.chart_bu, stretch=1)
 
         # Graphique Projets par Chef de projet
         self.chart_manager = self._create_bar_chart("Projets par Chef de projet")
-        right_layout.addWidget(self.chart_manager)
+        right_layout.addWidget(self.chart_manager, stretch=1)
 
-        right_layout.addStretch()
-        main_layout.addLayout(right_layout, 2)
+        main_layout.addLayout(right_layout, 3)
 
         group.setLayout(main_layout)
         return group
@@ -297,25 +296,25 @@ class DashboardTab(QWidget):
         separator.setStyleSheet("background-color: #FFA500; max-width: 3px;")
         main_layout.addWidget(separator)
 
-        # Graphiques et calendrier à droite
+        # Graphiques et calendrier à droite (extensibles)
         right_layout = QHBoxLayout()
         right_layout.setSpacing(10)
 
         # Graphique Warnings par BU
         self.chart_warnings_bu = self._create_bar_chart("Warnings par BU", color='#FF9800')
-        right_layout.addWidget(self.chart_warnings_bu)
+        right_layout.addWidget(self.chart_warnings_bu, stretch=1)
 
         # Actions par acteur (style calendrier)
         self.actions_calendar = self._create_actions_calendar()
-        right_layout.addWidget(self.actions_calendar, 2)
+        right_layout.addWidget(self.actions_calendar, stretch=2)
 
-        main_layout.addLayout(right_layout, 2)
+        main_layout.addLayout(right_layout, 3)
 
         group.setLayout(main_layout)
         return group
 
     def _create_bar_chart(self, title: str, color: str = '#2196F3') -> QWidget:
-        """Crée un widget contenant un graphique à bâtons matplotlib."""
+        """Crée un widget contenant un graphique à bâtons matplotlib (taille adaptative)."""
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setSpacing(3)
@@ -327,20 +326,21 @@ class DashboardTab(QWidget):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
-        # Figure matplotlib
-        fig = Figure(figsize=(2.8, 2.2), dpi=80)
+        # Figure matplotlib (taille adaptative)
+        fig = Figure(figsize=(5, 4), dpi=100)
         fig.patch.set_facecolor('#ffffff')
         canvas = FigureCanvas(fig)
-        canvas.setFixedHeight(180)
-        canvas.setFixedWidth(250)
+        canvas.setMinimumHeight(250)
+        canvas.setMinimumWidth(300)
 
-        widget.setFixedWidth(260)
-        widget.setFixedHeight(200)
+        # Widget extensible
+        widget.setMinimumWidth(320)
+        widget.setMinimumHeight(280)
 
         canvas.figure = fig
         canvas.chart_color = color
 
-        layout.addWidget(canvas)
+        layout.addWidget(canvas, stretch=1)
 
         return widget
 
