@@ -42,6 +42,8 @@ class DashboardCalculator:
             "active_projects": self._count_active(week_number),
             "dispositif_monthly": self._sum_dispositif_monthly(week_number),
             "dispositif_expandable": self._count_dispositif_expandable(week_number),
+            "critique_vision_client": self._count_critique_client(week_number),
+            "critique_vision_internal": self._count_critique_internal(week_number),
             "warning_vision_client": self._count_warning_client(week_number),
             "warning_vision_internal": self._count_warning_internal(week_number),
             "pct_projects_with_warning": self._calculate_pct_projects_with_warning(week_number),
@@ -110,6 +112,26 @@ class DashboardCalculator:
                WHERE week_number = ?
                AND status = 'EN COURS'
                AND (LOWER(vision_internal) LIKE '%warning%' OR vision_internal LIKE '%WARNING%')""",
+            (week,)
+        ) or 0
+
+    def _count_critique_client(self, week: int) -> int:
+        """Compte les critiques vision client (colonne P)."""
+        return self.db.execute_scalar(
+            """SELECT COUNT(*) FROM projects
+               WHERE week_number = ?
+               AND status = 'EN COURS'
+               AND (LOWER(vision_client) LIKE '%critique%' OR LOWER(vision_client) LIKE '%critical%')""",
+            (week,)
+        ) or 0
+
+    def _count_critique_internal(self, week: int) -> int:
+        """Compte les critiques vision interne (colonne Q)."""
+        return self.db.execute_scalar(
+            """SELECT COUNT(*) FROM projects
+               WHERE week_number = ?
+               AND status = 'EN COURS'
+               AND (LOWER(vision_internal) LIKE '%critique%' OR LOWER(vision_internal) LIKE '%critical%')""",
             (week,)
         ) or 0
 
@@ -350,6 +372,109 @@ class DashboardCalculator:
 
         return [dict(row) for row in rows]
 
+    def get_critiques_by_bu(self, week: int) -> List[Dict[str, Any]]:
+        """
+        Récupère le nombre de critiques par BU.
+        Chaque critique compte séparément : un projet avec P et Q critique compte pour 2.
+
+        Returns:
+            Liste de dicts: [{bu, count}]
+        """
+        query = """
+            SELECT
+                COALESCE(bu, 'Non défini') as bu,
+                COUNT(*) as count
+            FROM (
+                -- Critiques vision client (colonne P)
+                SELECT bu
+                FROM projects
+                WHERE week_number = ?
+                AND status = 'EN COURS'
+                AND (LOWER(vision_client) LIKE '%critique%' OR LOWER(vision_client) LIKE '%critical%')
+
+                UNION ALL
+
+                -- Critiques vision interne (colonne Q)
+                SELECT bu
+                FROM projects
+                WHERE week_number = ?
+                AND status = 'EN COURS'
+                AND (LOWER(vision_internal) LIKE '%critique%' OR LOWER(vision_internal) LIKE '%critical%')
+            )
+            GROUP BY bu
+            ORDER BY LOWER(bu) ASC
+        """
+
+        cursor = self.db.conn.cursor()
+        cursor.execute(query, (week, week))
+        rows = cursor.fetchall()
+
+        return [dict(row) for row in rows]
+
+    def get_critiques_and_warnings_by_bu(self, week: int) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Récupère le nombre de critiques ET warnings par BU dans une structure combinée.
+
+        Returns:
+            Dict avec 'critiques' et 'warnings', chacun étant [{bu, count}]
+        """
+        return {
+            'critiques': self.get_critiques_by_bu(week),
+            'warnings': self.get_warnings_by_bu(week)
+        }
+
+    def get_projects_critique_client(self, week: int) -> List[Dict[str, Any]]:
+        """Récupère les projets avec CRITIQUE en Vision Client."""
+        query = """
+            SELECT id_projet, client_name, project_manager, vision_client, vision_internal,
+                   comment_vision_client, action_description, next_actor
+            FROM projects
+            WHERE week_number = ?
+            AND status = 'EN COURS'
+            AND (LOWER(vision_client) LIKE '%critique%' OR LOWER(vision_client) LIKE '%critical%')
+            ORDER BY client_name
+        """
+        return self.db.execute_query(query, (week,))
+
+    def get_projects_critique_internal(self, week: int) -> List[Dict[str, Any]]:
+        """Récupère les projets avec CRITIQUE en Vision Interne."""
+        query = """
+            SELECT id_projet, client_name, project_manager, vision_client, vision_internal,
+                   comment_vision_internal, action_description, next_actor
+            FROM projects
+            WHERE week_number = ?
+            AND status = 'EN COURS'
+            AND (LOWER(vision_internal) LIKE '%critique%' OR LOWER(vision_internal) LIKE '%critical%')
+            ORDER BY client_name
+        """
+        return self.db.execute_query(query, (week,))
+
+    def get_projects_warning_client(self, week: int) -> List[Dict[str, Any]]:
+        """Récupère les projets avec WARNING en Vision Client."""
+        query = """
+            SELECT id_projet, client_name, project_manager, vision_client, vision_internal,
+                   comment_vision_client, action_description, next_actor
+            FROM projects
+            WHERE week_number = ?
+            AND status = 'EN COURS'
+            AND (LOWER(vision_client) LIKE '%warning%')
+            ORDER BY client_name
+        """
+        return self.db.execute_query(query, (week,))
+
+    def get_projects_warning_internal(self, week: int) -> List[Dict[str, Any]]:
+        """Récupère les projets avec WARNING en Vision Interne."""
+        query = """
+            SELECT id_projet, client_name, project_manager, vision_client, vision_internal,
+                   comment_vision_internal, action_description, next_actor
+            FROM projects
+            WHERE week_number = ?
+            AND status = 'EN COURS'
+            AND (LOWER(vision_internal) LIKE '%warning%')
+            ORDER BY client_name
+        """
+        return self.db.execute_query(query, (week,))
+
     def get_actions_by_actor(self, week: int) -> Dict[str, Any]:
         """
         Récupère le nombre d'actions par acteur (projets avec warning).
@@ -456,10 +581,10 @@ class DashboardCalculator:
 
     def get_warnings_evolution(self) -> Dict[str, Any]:
         """
-        Récupère l'évolution des warnings par semaine pour toutes les semaines disponibles.
+        Récupère l'évolution des warnings et critiques par semaine pour toutes les semaines disponibles.
 
         Returns:
-            Dict avec 'weeks', 'warning_client', 'warning_internal',
+            Dict avec 'weeks', 'warning_client', 'warning_internal', 'critique_client', 'critique_internal',
             'projects_with_warning' (nb de DOSSIERS en warning), 'active_projects'
         """
         from datetime import datetime
@@ -472,6 +597,8 @@ class DashboardCalculator:
                 'weeks': [],
                 'warning_client': [],
                 'warning_internal': [],
+                'critique_client': [],
+                'critique_internal': [],
                 'projects_with_warning': [],
                 'total_warnings': [],
                 'active_projects': []
@@ -491,6 +618,8 @@ class DashboardCalculator:
         weeks = sorted(available_weeks, key=chronological_sort)
         warning_client = []
         warning_internal = []
+        critique_client = []
+        critique_internal = []
         projects_with_warning = []
         total_warnings = []
         active_projects = []
@@ -498,11 +627,15 @@ class DashboardCalculator:
         for week in weeks:
             wc = self._count_warning_client(week)
             wi = self._count_warning_internal(week)
+            cc = self._count_critique_client(week)
+            ci = self._count_critique_internal(week)
             pw = self._count_projects_with_warning(week)  # Nb de DOSSIERS en warning
             active = self._count_active(week)
 
             warning_client.append(wc)
             warning_internal.append(wi)
+            critique_client.append(cc)
+            critique_internal.append(ci)
             projects_with_warning.append(pw)  # Compte un dossier une seule fois
             total_warnings.append(wc + wi)  # Conservé pour compatibilité
             active_projects.append(active)
@@ -512,6 +645,8 @@ class DashboardCalculator:
             'week_numbers': weeks,
             'warning_client': warning_client,
             'warning_internal': warning_internal,
+            'critique_client': critique_client,
+            'critique_internal': critique_internal,
             'projects_with_warning': projects_with_warning,
             'total_warnings': total_warnings,
             'active_projects': active_projects
@@ -519,11 +654,11 @@ class DashboardCalculator:
 
     def get_warnings_by_month(self) -> Dict[str, Any]:
         """
-        Agrège les warnings par mois (basé sur le numéro de semaine).
+        Agrège les warnings et critiques par mois (basé sur le numéro de semaine).
         Utilise la dernière semaine de chaque mois pour les statistiques.
 
         Returns:
-            Dict avec 'months', 'warning_client', 'warning_internal'
+            Dict avec 'months', 'warning_client', 'warning_internal', 'critique_client', 'critique_internal'
         """
         import datetime
 
@@ -535,6 +670,8 @@ class DashboardCalculator:
                 'months': [],
                 'warning_client': [],
                 'warning_internal': [],
+                'critique_client': [],
+                'critique_internal': [],
                 'total_warnings': []
             }
 
@@ -569,10 +706,12 @@ class DashboardCalculator:
                 # Si la semaine est invalide, on l'ignore
                 continue
 
-        # Pour chaque mois, prendre la dernière semaine et calculer les warnings
+        # Pour chaque mois, prendre la dernière semaine et calculer les warnings/critiques
         months = []
         warning_client = []
         warning_internal = []
+        critique_client = []
+        critique_internal = []
         total_warnings = []
 
         for month_key in sorted(weeks_by_month.keys()):
@@ -581,16 +720,22 @@ class DashboardCalculator:
 
             wc = self._count_warning_client(last_week)
             wi = self._count_warning_internal(last_week)
+            cc = self._count_critique_client(last_week)
+            ci = self._count_critique_internal(last_week)
 
             months.append(month_data['label'])
             warning_client.append(wc)
             warning_internal.append(wi)
+            critique_client.append(cc)
+            critique_internal.append(ci)
             total_warnings.append(wc + wi)
 
         return {
             'months': months,
             'warning_client': warning_client,
             'warning_internal': warning_internal,
+            'critique_client': critique_client,
+            'critique_internal': critique_internal,
             'total_warnings': total_warnings
         }
 

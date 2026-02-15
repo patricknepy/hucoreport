@@ -13,6 +13,11 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from pathlib import Path
 
+import matplotlib
+matplotlib.use('QtAgg')
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+
 import logging
 
 from src.core.dashboard_calculator import DashboardCalculator
@@ -167,9 +172,78 @@ class KPITab(QWidget):
 
         main_layout.addWidget(header_widget)
 
-        # ========== Section 1 : Santé du Portefeuille ==========
-        sante_group = QGroupBox("1. Santé du Portefeuille")
-        sante_group.setStyleSheet("""
+        # ========== Section 1 : Taux de Maîtrise ==========
+        maitrise_group = QGroupBox("1. Taux de Maîtrise du Portefeuille")
+        maitrise_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 13px;
+                border: 2px solid #4CAF50;
+                border-radius: 8px;
+                margin-top: 12px;
+                padding-top: 8px;
+                background-color: #f8f9fa;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 15px;
+                padding: 0 8px;
+                color: #2E7D32;
+            }
+        """)
+
+        maitrise_main = QVBoxLayout(maitrise_group)
+        maitrise_main.setSpacing(10)
+        maitrise_main.setContentsMargins(15, 25, 15, 15)
+
+        # Ligne 1 : KPI Cards
+        row1_layout = QHBoxLayout()
+        row1_layout.setSpacing(15)
+
+        self.kpi_maitrise = KPICard(
+            "Taux de Maîtrise",
+            "0%",
+            "Projets sans warning",
+            "#4CAF50"
+        )
+        row1_layout.addWidget(self.kpi_maitrise)
+
+        self.kpi_critique_client = KPICard(
+            "Critique Client",
+            "0%",
+            "Vision Client",
+            "#7030A0"
+        )
+        row1_layout.addWidget(self.kpi_critique_client)
+
+        self.kpi_critique_interne = KPICard(
+            "Critique Interne",
+            "0%",
+            "Vision Interne",
+            "#9B59B6"
+        )
+        row1_layout.addWidget(self.kpi_critique_interne)
+
+        self.kpi_warning_total = KPICard(
+            "Projets en Warning",
+            "0",
+            "Client ou Interne",
+            "#E67E00"
+        )
+        row1_layout.addWidget(self.kpi_warning_total)
+
+        row1_layout.addStretch()
+        maitrise_main.addLayout(row1_layout)
+
+        # Ligne 2 : Graphique évolution du taux de maîtrise
+        self.chart_evolution = self._create_chart_widget("Evolution du Taux de Maîtrise par Semaine")
+        maitrise_main.addWidget(self.chart_evolution)
+
+        main_layout.addWidget(maitrise_group)
+
+        # ========== Section 2 : Répartition par Chef de Projet ==========
+        repartition_group = QGroupBox("2. Répartition par Chef de Projet")
+        repartition_group.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
                 font-size: 13px;
@@ -187,46 +261,19 @@ class KPITab(QWidget):
             }
         """)
 
-        sante_layout = QHBoxLayout(sante_group)
-        sante_layout.setSpacing(15)
-        sante_layout.setContentsMargins(15, 25, 15, 15)
+        repartition_layout = QHBoxLayout(repartition_group)
+        repartition_layout.setSpacing(15)
+        repartition_layout.setContentsMargins(15, 25, 15, 15)
 
-        # KPI Cards - Santé
-        self.kpi_sains = KPICard(
-            "Taux Projets Sains",
-            "0%",
-            "Sans warning",
-            "#4CAF50"
-        )
-        sante_layout.addWidget(self.kpi_sains)
+        # Graphique Warnings par CDP
+        self.chart_warnings_cdp = self._create_chart_widget("Warnings par Chef de Projet")
+        repartition_layout.addWidget(self.chart_warnings_cdp)
 
-        self.kpi_anticipe = KPICard(
-            "Alerte Anticipée",
-            "0%",
-            "Warning Interne seul",
-            "#2196F3"
-        )
-        sante_layout.addWidget(self.kpi_anticipe)
+        # Graphique Critiques par CDP
+        self.chart_critiques_cdp = self._create_chart_widget("Critiques par Chef de Projet")
+        repartition_layout.addWidget(self.chart_critiques_cdp)
 
-        self.kpi_risque = KPICard(
-            "Projets à Risque",
-            "0",
-            "Double warning",
-            "#f44336"
-        )
-        sante_layout.addWidget(self.kpi_risque)
-
-        self.kpi_tendance = KPICard(
-            "Tendance",
-            "-",
-            "vs semaine préc.",
-            "#FF9800"
-        )
-        sante_layout.addWidget(self.kpi_tendance)
-
-        sante_layout.addStretch()
-
-        main_layout.addWidget(sante_group)
+        main_layout.addWidget(repartition_group)
 
         # ========== Section 2 : KPIs Commerciaux ==========
         commercial_group = QGroupBox("2. Performance Commerciale (input.xlsx)")
@@ -339,6 +386,32 @@ class KPITab(QWidget):
         scroll.setWidget(content_widget)
         outer_layout.addWidget(scroll)
 
+    def _create_chart_widget(self, title: str) -> QWidget:
+        """Crée un widget avec un graphique matplotlib."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(3)
+        layout.setContentsMargins(5, 3, 5, 3)
+
+        # Titre
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-weight: bold; font-size: 10pt; background: transparent;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
+
+        # Figure matplotlib
+        fig = Figure(figsize=(5, 3), dpi=100)
+        fig.patch.set_facecolor('#f8f9fa')
+        canvas = FigureCanvas(fig)
+        canvas.setMinimumHeight(200)
+
+        widget.figure = fig
+        widget.canvas = canvas
+
+        layout.addWidget(canvas, stretch=1)
+
+        return widget
+
     def load_weeks(self):
         """Charge les semaines disponibles."""
         weeks = self.db.get_available_weeks()
@@ -373,44 +446,49 @@ class KPITab(QWidget):
         try:
             week = self.current_week
 
-            # Calculs
+            # Calculs de base
             total_actifs = self.calculator._count_active(week)
-            warning_client = self.calculator._count_warning_client(week)
-            warning_internal = self.calculator._count_warning_internal(week)
             projects_with_warning = self.calculator._count_projects_with_warning(week)
+            critique_client = self.calculator._count_critique_client(week)
+            critique_internal = self.calculator._count_critique_internal(week)
 
-            # 1. Taux de projets sains
+            # 1. Taux de maîtrise (% sans warning)
             if total_actifs > 0:
-                taux_sains = ((total_actifs - projects_with_warning) / total_actifs) * 100
+                taux_maitrise = ((total_actifs - projects_with_warning) / total_actifs) * 100
             else:
-                taux_sains = 0
-            self.kpi_sains.set_value(f"{taux_sains:.1f}%")
+                taux_maitrise = 100
+            self.kpi_maitrise.set_value(f"{taux_maitrise:.1f}%")
 
-            # 2. Taux d'alerte anticipée
-            warning_interne_seul = self._count_warning_internal_only(week)
-            if projects_with_warning > 0:
-                taux_anticipe = (warning_interne_seul / projects_with_warning) * 100
+            # 2. Taux critique client
+            if total_actifs > 0:
+                taux_critique_client = (critique_client / total_actifs) * 100
             else:
-                taux_anticipe = 0
-            self.kpi_anticipe.set_value(f"{taux_anticipe:.1f}%")
+                taux_critique_client = 0
+            self.kpi_critique_client.set_value(f"{taux_critique_client:.1f}%")
 
-            # 3. Projets à risque
-            projets_risque = self._count_double_warning(week)
-            self.kpi_risque.set_value(str(projets_risque))
+            # 3. Taux critique interne
+            if total_actifs > 0:
+                taux_critique_interne = (critique_internal / total_actifs) * 100
+            else:
+                taux_critique_interne = 0
+            self.kpi_critique_interne.set_value(f"{taux_critique_interne:.1f}%")
 
-            # 4. Tendance warnings
-            tendance = self._calculate_tendance(week)
-            self.kpi_tendance.set_value(tendance)
+            # 4. Total projets en warning
+            self.kpi_warning_total.set_value(str(projects_with_warning))
+
+            # Mise à jour des graphiques
+            self._update_evolution_chart()
+            self._update_warnings_by_cdp_chart(week)
+            self._update_critiques_by_cdp_chart(week)
 
             # Détails
             details = f"""
 <b>Semaine S{week:02d}</b><br><br>
 <b>Projets actifs :</b> {total_actifs}<br>
-<b>Projets sains :</b> {total_actifs - projects_with_warning} ({taux_sains:.1f}%)<br>
-<b>Projets avec warning :</b> {projects_with_warning}<br>
-&nbsp;&nbsp;- Warning Client uniquement : {warning_client - projets_risque}<br>
-&nbsp;&nbsp;- Warning Interne uniquement : {warning_interne_seul}<br>
-&nbsp;&nbsp;- Double warning : {projets_risque}
+<b>Taux de maîtrise :</b> {taux_maitrise:.1f}% ({total_actifs - projects_with_warning} projets sains)<br>
+<b>Projets en warning :</b> {projects_with_warning}<br>
+<b>Critiques Client :</b> {critique_client} ({taux_critique_client:.1f}%)<br>
+<b>Critiques Interne :</b> {critique_internal} ({taux_critique_interne:.1f}%)
 """
             self.details_label.setText(details)
 
@@ -419,56 +497,175 @@ class KPITab(QWidget):
             import traceback
             traceback.print_exc()
 
-    def _count_warning_internal_only(self, week: int) -> int:
-        """Compte les projets avec warning interne SANS warning client."""
-        return self.db.execute_scalar(
-            """SELECT COUNT(DISTINCT id_projet) FROM projects
-               WHERE week_number = ?
-               AND status = 'EN COURS'
-               AND (LOWER(vision_internal) LIKE '%warning%')
-               AND (vision_client IS NULL OR LOWER(vision_client) NOT LIKE '%warning%')""",
-            (week,)
-        ) or 0
+    def _update_evolution_chart(self):
+        """Met à jour le graphique d'évolution du taux de maîtrise."""
+        import numpy as np
+        from datetime import datetime
 
-    def _count_double_warning(self, week: int) -> int:
-        """Compte les projets avec warning client ET interne."""
-        return self.db.execute_scalar(
-            """SELECT COUNT(DISTINCT id_projet) FROM projects
-               WHERE week_number = ?
-               AND status = 'EN COURS'
-               AND (LOWER(vision_client) LIKE '%warning%')
-               AND (LOWER(vision_internal) LIKE '%warning%')""",
-            (week,)
-        ) or 0
+        fig = self.chart_evolution.figure
+        fig.clear()
+        ax = fig.add_subplot(111)
 
-    def _calculate_tendance(self, week: int) -> str:
-        """Calcule la tendance des warnings vs semaine précédente."""
+        # Récupérer toutes les semaines
         available_weeks = self.db.get_available_weeks()
 
-        if len(available_weeks) < 2:
-            return "-"
+        if not available_weeks:
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', fontsize=12)
+            ax.axis('off')
+            self.chart_evolution.canvas.draw()
+            return
 
-        try:
-            current_idx = available_weeks.index(week)
-            if current_idx >= len(available_weeks) - 1:
-                return "-"
+        # Tri chronologique
+        current_week = datetime.now().isocalendar()[1]
 
-            prev_week = available_weeks[current_idx + 1]
+        def chronological_sort(week: int) -> int:
+            if week > current_week:
+                return week - 100
+            return week
 
-            current_warnings = self.calculator._count_projects_with_warning(week)
-            prev_warnings = self.calculator._count_projects_with_warning(prev_week)
+        weeks = sorted(available_weeks, key=chronological_sort)
 
-            diff = current_warnings - prev_warnings
-
-            if diff > 0:
-                return f"+{diff}"
-            elif diff < 0:
-                return str(diff)
+        # Calculer le taux de maîtrise pour chaque semaine
+        taux_maitrise = []
+        for w in weeks:
+            total = self.calculator._count_active(w)
+            with_warning = self.calculator._count_projects_with_warning(w)
+            if total > 0:
+                taux = ((total - with_warning) / total) * 100
             else:
-                return "="
+                taux = 100
+            taux_maitrise.append(taux)
 
-        except (ValueError, IndexError):
-            return "-"
+        x = np.arange(len(weeks))
+        week_labels = [f"S{w}" for w in weeks]
+
+        # Barres avec couleur selon le taux
+        colors = ['#4CAF50' if t >= 80 else '#FFC107' if t >= 60 else '#f44336' for t in taux_maitrise]
+        bars = ax.bar(x, taux_maitrise, color=colors, alpha=0.8)
+
+        # Ligne de tendance
+        ax.plot(x, taux_maitrise, color='#2E7D32', linewidth=2, marker='o', markersize=5)
+
+        ax.set_xlabel('Semaine', fontsize=9)
+        ax.set_ylabel('Taux de maîtrise (%)', fontsize=9)
+        ax.set_xticks(x)
+        ax.set_xticklabels(week_labels, rotation=45, ha='right', fontsize=8)
+        ax.set_ylim(0, 105)
+        ax.axhline(y=80, color='#4CAF50', linestyle='--', alpha=0.5, label='Objectif 80%')
+        ax.grid(axis='y', alpha=0.3)
+        ax.set_facecolor('#f8f9fa')
+
+        # Valeurs sur les barres
+        for bar, val in zip(bars, taux_maitrise):
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
+                   f'{val:.0f}%', ha='center', va='bottom', fontsize=7, fontweight='bold')
+
+        fig.tight_layout()
+        self.chart_evolution.canvas.draw()
+
+    def _update_warnings_by_cdp_chart(self, week: int):
+        """Met à jour le graphique des warnings par chef de projet."""
+        import numpy as np
+
+        fig = self.chart_warnings_cdp.figure
+        fig.clear()
+        ax = fig.add_subplot(111)
+
+        # Requête pour compter les warnings par CDP
+        query = """
+            SELECT
+                COALESCE(project_manager, 'Non défini') as cdp,
+                SUM(CASE WHEN LOWER(vision_client) LIKE '%warning%' THEN 1 ELSE 0 END) as warning_client,
+                SUM(CASE WHEN LOWER(vision_internal) LIKE '%warning%' THEN 1 ELSE 0 END) as warning_interne
+            FROM projects
+            WHERE week_number = ?
+            AND status = 'EN COURS'
+            GROUP BY project_manager
+            HAVING warning_client > 0 OR warning_interne > 0
+            ORDER BY (warning_client + warning_interne) DESC
+            LIMIT 10
+        """
+        cursor = self.db.conn.cursor()
+        cursor.execute(query, (week,))
+        rows = cursor.fetchall()
+
+        if not rows:
+            ax.text(0.5, 0.5, 'Aucun warning', ha='center', va='center', fontsize=12)
+            ax.axis('off')
+            self.chart_warnings_cdp.canvas.draw()
+            return
+
+        cdps = [row['cdp'][:15] for row in rows]  # Tronquer les noms
+        warning_client = [row['warning_client'] for row in rows]
+        warning_interne = [row['warning_interne'] for row in rows]
+
+        x = np.arange(len(cdps))
+        width = 0.35
+
+        bars1 = ax.bar(x - width/2, warning_client, width, label='Client', color='#FFC000', alpha=0.9)
+        bars2 = ax.bar(x + width/2, warning_interne, width, label='Interne', color='#FF9800', alpha=0.9)
+
+        ax.set_ylabel('Nb warnings', fontsize=9)
+        ax.set_xticks(x)
+        ax.set_xticklabels(cdps, rotation=45, ha='right', fontsize=7)
+        ax.legend(fontsize=8)
+        ax.grid(axis='y', alpha=0.3)
+        ax.set_facecolor('#f8f9fa')
+
+        fig.tight_layout()
+        self.chart_warnings_cdp.canvas.draw()
+
+    def _update_critiques_by_cdp_chart(self, week: int):
+        """Met à jour le graphique des critiques par chef de projet."""
+        import numpy as np
+
+        fig = self.chart_critiques_cdp.figure
+        fig.clear()
+        ax = fig.add_subplot(111)
+
+        # Requête pour compter les critiques par CDP
+        query = """
+            SELECT
+                COALESCE(project_manager, 'Non défini') as cdp,
+                SUM(CASE WHEN LOWER(vision_client) LIKE '%critique%' OR LOWER(vision_client) LIKE '%critical%' THEN 1 ELSE 0 END) as critique_client,
+                SUM(CASE WHEN LOWER(vision_internal) LIKE '%critique%' OR LOWER(vision_internal) LIKE '%critical%' THEN 1 ELSE 0 END) as critique_interne
+            FROM projects
+            WHERE week_number = ?
+            AND status = 'EN COURS'
+            GROUP BY project_manager
+            HAVING critique_client > 0 OR critique_interne > 0
+            ORDER BY (critique_client + critique_interne) DESC
+            LIMIT 10
+        """
+        cursor = self.db.conn.cursor()
+        cursor.execute(query, (week,))
+        rows = cursor.fetchall()
+
+        if not rows:
+            ax.text(0.5, 0.5, 'Aucun critique', ha='center', va='center', fontsize=12)
+            ax.axis('off')
+            self.chart_critiques_cdp.canvas.draw()
+            return
+
+        cdps = [row['cdp'][:15] for row in rows]  # Tronquer les noms
+        critique_client = [row['critique_client'] for row in rows]
+        critique_interne = [row['critique_interne'] for row in rows]
+
+        x = np.arange(len(cdps))
+        width = 0.35
+
+        bars1 = ax.bar(x - width/2, critique_client, width, label='Client', color='#7030A0', alpha=0.9)
+        bars2 = ax.bar(x + width/2, critique_interne, width, label='Interne', color='#9B59B6', alpha=0.9)
+
+        ax.set_ylabel('Nb critiques', fontsize=9)
+        ax.set_xticks(x)
+        ax.set_xticklabels(cdps, rotation=45, ha='right', fontsize=7)
+        ax.legend(fontsize=8)
+        ax.grid(axis='y', alpha=0.3)
+        ax.set_facecolor('#f8f9fa')
+
+        fig.tight_layout()
+        self.chart_critiques_cdp.canvas.draw()
 
     def auto_load_commercial(self):
         """Charge automatiquement input.xlsx s'il existe."""

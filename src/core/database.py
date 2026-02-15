@@ -47,6 +47,7 @@ class Database:
         self.conn: Optional[sqlite3.Connection] = None
         self._connect()
         self._create_tables()
+        self._migrate_schema()
 
     def _connect(self):
         """Établit la connexion à la base de données."""
@@ -170,6 +171,35 @@ class Database:
         except sqlite3.Error as e:
             logger.error(f"Erreur creation tables : {e}")
             raise
+
+    def _migrate_schema(self):
+        """Ajoute les colonnes manquantes à la table projects (migration)."""
+        cursor = self.conn.cursor()
+
+        # Colonnes à ajouter si manquantes (nom, type, position après)
+        migrations = [
+            ('comment_vision_client', 'TEXT', 'vision_internal'),
+            ('comment_vision_internal', 'TEXT', 'comment_vision_client'),
+            ('upsell', 'TEXT', 'dli'),
+            ('crosssell', 'TEXT', 'upsell'),
+        ]
+
+        try:
+            # Récupérer les colonnes existantes
+            cursor.execute('PRAGMA table_info(projects)')
+            existing_cols = {row[1] for row in cursor.fetchall()}
+
+            for col_name, col_type, after_col in migrations:
+                if col_name not in existing_cols:
+                    # SQLite ne supporte pas AFTER, on ajoute à la fin
+                    cursor.execute(f'ALTER TABLE projects ADD COLUMN {col_name} {col_type}')
+                    logger.info(f"Migration: colonne '{col_name}' ajoutee")
+
+            self.conn.commit()
+
+        except sqlite3.Error as e:
+            logger.error(f"Erreur migration schema : {e}")
+            # Ne pas lever d'exception pour ne pas bloquer le démarrage
 
     def clear_all(self):
         """Vide complètement la table projects (utilisé avant chaque import)."""

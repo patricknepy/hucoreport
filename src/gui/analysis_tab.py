@@ -43,7 +43,7 @@ class AnalysisTab(QWidget):
         # En-tête compact : titre + bouton sur une ligne
         header_layout = QHBoxLayout()
 
-        title_label = QLabel("Evolution des Warnings")
+        title_label = QLabel("Evolution Critiques & Warnings")
         title_font = QFont()
         title_font.setPointSize(12)
         title_font.setBold(True)
@@ -82,41 +82,53 @@ class AnalysisTab(QWidget):
         self.charts_layout = QVBoxLayout(scroll_content)
         self.charts_layout.setSpacing(10)
 
-        # Ligne 1 : 2 graphiques côte à côte
+        # Ligne 1 : WARNINGS (Vision Client + Vision Interne) par semaine et par mois
         row1_layout = QHBoxLayout()
         row1_layout.setSpacing(10)
 
-        # Graphique 1 : Warnings par semaine
-        self.weekly_chart_group = self._create_chart_group(
-            "Warnings par Semaine", ""
+        self.warnings_weekly_group = self._create_chart_group(
+            "WARNINGS - Evolution par Semaine", ""
         )
-        row1_layout.addWidget(self.weekly_chart_group)
+        row1_layout.addWidget(self.warnings_weekly_group)
 
-        # Graphique 2 : Projets actifs par semaine
-        self.active_chart_group = self._create_chart_group(
-            "Projets Actifs par Semaine", ""
+        self.warnings_monthly_group = self._create_chart_group(
+            "WARNINGS - Evolution par Mois", ""
         )
-        row1_layout.addWidget(self.active_chart_group)
+        row1_layout.addWidget(self.warnings_monthly_group)
 
         self.charts_layout.addLayout(row1_layout)
 
-        # Ligne 2 : 2 graphiques côte à côte
+        # Ligne 2 : CRITIQUES (Vision Client + Vision Interne) par semaine et par mois
         row2_layout = QHBoxLayout()
         row2_layout.setSpacing(10)
 
-        # Graphique 3 : % Warnings
+        self.critiques_weekly_group = self._create_chart_group(
+            "CRITIQUES - Evolution par Semaine", ""
+        )
+        row2_layout.addWidget(self.critiques_weekly_group)
+
+        self.critiques_monthly_group = self._create_chart_group(
+            "CRITIQUES - Evolution par Mois", ""
+        )
+        row2_layout.addWidget(self.critiques_monthly_group)
+
+        self.charts_layout.addLayout(row2_layout)
+
+        # Ligne 3 : Projets actifs et % Warning
+        row3_layout = QHBoxLayout()
+        row3_layout.setSpacing(10)
+
+        self.active_chart_group = self._create_chart_group(
+            "Projets Actifs par Semaine", ""
+        )
+        row3_layout.addWidget(self.active_chart_group)
+
         self.ratio_chart_group = self._create_chart_group(
             "% Warnings / Projets Actifs", ""
         )
-        row2_layout.addWidget(self.ratio_chart_group)
+        row3_layout.addWidget(self.ratio_chart_group)
 
-        # Graphique 4 : Warnings par mois
-        self.monthly_chart_group = self._create_chart_group(
-            "Warnings par Mois", ""
-        )
-        row2_layout.addWidget(self.monthly_chart_group)
-
-        self.charts_layout.addLayout(row2_layout)
+        self.charts_layout.addLayout(row3_layout)
 
         self.charts_layout.addStretch()
 
@@ -170,11 +182,13 @@ class AnalysisTab(QWidget):
             weekly_data = self.calculator.get_warnings_evolution()
             monthly_data = self.calculator.get_warnings_by_month()
 
-            # Mettre à jour les 4 graphiques
-            self._update_weekly_chart(weekly_data)
+            # Mettre à jour les 6 graphiques
+            self._update_warnings_weekly(weekly_data)
+            self._update_warnings_monthly(monthly_data)
+            self._update_critiques_weekly(weekly_data)
+            self._update_critiques_monthly(monthly_data)
             self._update_active_projects_chart(weekly_data)
             self._update_ratio_chart(weekly_data)
-            self._update_monthly_chart(monthly_data)
 
         except Exception as e:
             logger.error(f"Erreur lors de l'actualisation des graphiques: {e}")
@@ -226,9 +240,9 @@ class AnalysisTab(QWidget):
         figure.tight_layout()
         self.active_chart_group.canvas.draw()
 
-    def _update_weekly_chart(self, data: dict):
-        """Met à jour le graphique d'évolution par semaine."""
-        figure = self.weekly_chart_group.figure
+    def _update_warnings_weekly(self, data: dict):
+        """Met à jour le graphique WARNINGS par semaine (Vision Client + Vision Interne)."""
+        figure = self.warnings_weekly_group.figure
         figure.clear()
 
         ax = figure.add_subplot(111)
@@ -248,43 +262,37 @@ class AnalysisTab(QWidget):
             x = np.arange(len(weeks))
             width = 0.35
 
-            bars1 = ax.bar(x - width/2, warning_client, width,
-                          label='Vision Client', color='#FF5722', alpha=0.8)
-            bars2 = ax.bar(x + width/2, warning_internal, width,
-                          label='Vision Interne', color='#FF9800', alpha=0.8)
+            # Warning Client en orange (#FFC000), Warning Interne en orange foncé (#FF9800)
+            bars_client = ax.bar(x - width/2, warning_client, width,
+                                label='Vision Client', color='#FFC000', alpha=0.9)
+            bars_internal = ax.bar(x + width/2, warning_internal, width,
+                                  label='Vision Interne', color='#FF9800', alpha=0.9)
 
             ax.set_xlabel('Semaine', fontsize=10)
-            ax.set_ylabel('Nombre de warnings', fontsize=10)
-            ax.set_title('Evolution des Warnings par Semaine', fontsize=12, fontweight='bold')
+            ax.set_ylabel('Nombre', fontsize=10)
+            ax.set_title('WARNINGS - Evolution par Semaine', fontsize=12, fontweight='bold', color='#E67E00')
             ax.set_xticks(x)
             ax.set_xticklabels(weeks, rotation=45, ha='right')
-            ax.legend(loc='upper left')
+            ax.legend(loc='upper left', fontsize=9)
             ax.set_facecolor('#fafafa')
             ax.grid(axis='y', alpha=0.3)
 
-            # Ajouter les valeurs sur les barres
-            for bar in bars1:
-                height = bar.get_height()
-                if height > 0:
-                    ax.annotate(f'{int(height)}',
-                               xy=(bar.get_x() + bar.get_width() / 2, height),
-                               xytext=(0, 3), textcoords="offset points",
-                               ha='center', va='bottom', fontsize=8)
-
-            for bar in bars2:
-                height = bar.get_height()
-                if height > 0:
-                    ax.annotate(f'{int(height)}',
-                               xy=(bar.get_x() + bar.get_width() / 2, height),
-                               xytext=(0, 3), textcoords="offset points",
-                               ha='center', va='bottom', fontsize=8)
+            # Valeurs sur les barres
+            for bars in [bars_client, bars_internal]:
+                for bar in bars:
+                    height = bar.get_height()
+                    if height > 0:
+                        ax.annotate(f'{int(height)}',
+                                   xy=(bar.get_x() + bar.get_width() / 2, height),
+                                   xytext=(0, 2), textcoords="offset points",
+                                   ha='center', va='bottom', fontsize=8, fontweight='bold')
 
         figure.tight_layout()
-        self.weekly_chart_group.canvas.draw()
+        self.warnings_weekly_group.canvas.draw()
 
-    def _update_monthly_chart(self, data: dict):
-        """Met à jour le graphique d'évolution par mois."""
-        figure = self.monthly_chart_group.figure
+    def _update_warnings_monthly(self, data: dict):
+        """Met à jour le graphique WARNINGS par mois (Vision Client + Vision Interne)."""
+        figure = self.warnings_monthly_group.figure
         figure.clear()
 
         ax = figure.add_subplot(111)
@@ -304,39 +312,133 @@ class AnalysisTab(QWidget):
             x = np.arange(len(months))
             width = 0.35
 
-            bars1 = ax.bar(x - width/2, warning_client, width,
-                          label='Vision Client', color='#E91E63', alpha=0.8)
-            bars2 = ax.bar(x + width/2, warning_internal, width,
-                          label='Vision Interne', color='#9C27B0', alpha=0.8)
+            # Warning Client en orange (#FFC000), Warning Interne en orange foncé (#FF9800)
+            bars_client = ax.bar(x - width/2, warning_client, width,
+                                label='Vision Client', color='#FFC000', alpha=0.9)
+            bars_internal = ax.bar(x + width/2, warning_internal, width,
+                                  label='Vision Interne', color='#FF9800', alpha=0.9)
 
             ax.set_xlabel('Mois', fontsize=10)
-            ax.set_ylabel('Nombre de warnings', fontsize=10)
-            ax.set_title('Evolution des Warnings par Mois', fontsize=12, fontweight='bold')
+            ax.set_ylabel('Nombre', fontsize=10)
+            ax.set_title('WARNINGS - Evolution par Mois', fontsize=12, fontweight='bold', color='#E67E00')
             ax.set_xticks(x)
             ax.set_xticklabels(months, rotation=45, ha='right')
-            ax.legend(loc='upper left')
+            ax.legend(loc='upper left', fontsize=9)
             ax.set_facecolor('#fafafa')
             ax.grid(axis='y', alpha=0.3)
 
-            # Ajouter les valeurs sur les barres
-            for bar in bars1:
-                height = bar.get_height()
-                if height > 0:
-                    ax.annotate(f'{int(height)}',
-                               xy=(bar.get_x() + bar.get_width() / 2, height),
-                               xytext=(0, 3), textcoords="offset points",
-                               ha='center', va='bottom', fontsize=8)
-
-            for bar in bars2:
-                height = bar.get_height()
-                if height > 0:
-                    ax.annotate(f'{int(height)}',
-                               xy=(bar.get_x() + bar.get_width() / 2, height),
-                               xytext=(0, 3), textcoords="offset points",
-                               ha='center', va='bottom', fontsize=8)
+            # Valeurs sur les barres
+            for bars in [bars_client, bars_internal]:
+                for bar in bars:
+                    height = bar.get_height()
+                    if height > 0:
+                        ax.annotate(f'{int(height)}',
+                                   xy=(bar.get_x() + bar.get_width() / 2, height),
+                                   xytext=(0, 2), textcoords="offset points",
+                                   ha='center', va='bottom', fontsize=8, fontweight='bold')
 
         figure.tight_layout()
-        self.monthly_chart_group.canvas.draw()
+        self.warnings_monthly_group.canvas.draw()
+
+    def _update_critiques_weekly(self, data: dict):
+        """Met à jour le graphique CRITIQUES par semaine (Vision Client + Vision Interne)."""
+        figure = self.critiques_weekly_group.figure
+        figure.clear()
+
+        ax = figure.add_subplot(111)
+
+        weeks = data.get('weeks', [])
+        critique_client = data.get('critique_client', [])
+        critique_internal = data.get('critique_internal', [])
+
+        if not weeks:
+            ax.text(0.5, 0.5, 'Aucune donnée disponible\nImportez un fichier Excel',
+                   ha='center', va='center', fontsize=14, color='#999',
+                   transform=ax.transAxes)
+            ax.set_facecolor('#fafafa')
+            ax.axis('off')
+        else:
+            import numpy as np
+            x = np.arange(len(weeks))
+            width = 0.35
+
+            # Critique Client en violet foncé (#7030A0), Critique Interne en violet clair (#9B59B6)
+            bars_client = ax.bar(x - width/2, critique_client, width,
+                                label='Vision Client', color='#7030A0', alpha=0.9)
+            bars_internal = ax.bar(x + width/2, critique_internal, width,
+                                  label='Vision Interne', color='#9B59B6', alpha=0.9)
+
+            ax.set_xlabel('Semaine', fontsize=10)
+            ax.set_ylabel('Nombre', fontsize=10)
+            ax.set_title('CRITIQUES - Evolution par Semaine', fontsize=12, fontweight='bold', color='#7030A0')
+            ax.set_xticks(x)
+            ax.set_xticklabels(weeks, rotation=45, ha='right')
+            ax.legend(loc='upper left', fontsize=9)
+            ax.set_facecolor('#fafafa')
+            ax.grid(axis='y', alpha=0.3)
+
+            # Valeurs sur les barres
+            for bars in [bars_client, bars_internal]:
+                for bar in bars:
+                    height = bar.get_height()
+                    if height > 0:
+                        ax.annotate(f'{int(height)}',
+                                   xy=(bar.get_x() + bar.get_width() / 2, height),
+                                   xytext=(0, 2), textcoords="offset points",
+                                   ha='center', va='bottom', fontsize=8, fontweight='bold')
+
+        figure.tight_layout()
+        self.critiques_weekly_group.canvas.draw()
+
+    def _update_critiques_monthly(self, data: dict):
+        """Met à jour le graphique CRITIQUES par mois (Vision Client + Vision Interne)."""
+        figure = self.critiques_monthly_group.figure
+        figure.clear()
+
+        ax = figure.add_subplot(111)
+
+        months = data.get('months', [])
+        critique_client = data.get('critique_client', [])
+        critique_internal = data.get('critique_internal', [])
+
+        if not months:
+            ax.text(0.5, 0.5, 'Aucune donnée disponible\nImportez un fichier Excel',
+                   ha='center', va='center', fontsize=14, color='#999',
+                   transform=ax.transAxes)
+            ax.set_facecolor('#fafafa')
+            ax.axis('off')
+        else:
+            import numpy as np
+            x = np.arange(len(months))
+            width = 0.35
+
+            # Critique Client en violet foncé (#7030A0), Critique Interne en violet clair (#9B59B6)
+            bars_client = ax.bar(x - width/2, critique_client, width,
+                                label='Vision Client', color='#7030A0', alpha=0.9)
+            bars_internal = ax.bar(x + width/2, critique_internal, width,
+                                  label='Vision Interne', color='#9B59B6', alpha=0.9)
+
+            ax.set_xlabel('Mois', fontsize=10)
+            ax.set_ylabel('Nombre', fontsize=10)
+            ax.set_title('CRITIQUES - Evolution par Mois', fontsize=12, fontweight='bold', color='#7030A0')
+            ax.set_xticks(x)
+            ax.set_xticklabels(months, rotation=45, ha='right')
+            ax.legend(loc='upper left', fontsize=9)
+            ax.set_facecolor('#fafafa')
+            ax.grid(axis='y', alpha=0.3)
+
+            # Valeurs sur les barres
+            for bars in [bars_client, bars_internal]:
+                for bar in bars:
+                    height = bar.get_height()
+                    if height > 0:
+                        ax.annotate(f'{int(height)}',
+                                   xy=(bar.get_x() + bar.get_width() / 2, height),
+                                   xytext=(0, 2), textcoords="offset points",
+                                   ha='center', va='bottom', fontsize=8, fontweight='bold')
+
+        figure.tight_layout()
+        self.critiques_monthly_group.canvas.draw()
 
     def _update_ratio_chart(self, data: dict):
         """Met à jour le graphique du ratio dossiers en warning / projets actifs."""

@@ -128,16 +128,16 @@
       "db_field": "vision_client",
       "type": "TEXT",
       "required": false,
-      "allowed_values": ["warning", "WARNING", "bon", "BON", "à améliorer", "non défini", ""],
-      "description": "Actualité/État vision client"
+      "allowed_values": ["CRITIQUE", "critique", "WARNING", "warning", "BON", "bon", "EXCELLENT", "excellent", "NON DÉFINI", "non défini", ""],
+      "description": "Actualité/État vision client (CRITIQUE, WARNING, BON, EXCELLENT, NON DÉFINI)"
     },
     "Q": {
       "expected_name": "Vision Interne",
       "db_field": "vision_internal",
       "type": "TEXT",
       "required": false,
-      "allowed_values": ["warning", "WARNING", "bon", "BON", "à améliorer", "non défini", ""],
-      "description": "Actualité/État vision interne"
+      "allowed_values": ["CRITIQUE", "critique", "WARNING", "warning", "BON", "bon", "EXCELLENT", "excellent", "NON DÉFINI", "non défini", ""],
+      "description": "Actualité/État vision interne (CRITIQUE, WARNING, BON, EXCELLENT, NON DÉFINI)"
     },
     "R": {
       "expected_name": "Risque identifié",

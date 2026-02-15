@@ -66,7 +66,11 @@ class DashboardTab(QWidget):
         content_layout.setSpacing(8)
         content_layout.setContentsMargins(5, 5, 5, 5)
 
-        # DEADLINES EN PREMIER (tuiles horizontales)
+        # ALERTES EN PREMIER (CRITIQUE et WARNING)
+        self.alertes_group = self._create_alertes_section()
+        content_layout.addWidget(self.alertes_group)
+
+        # DEADLINES (tuiles horizontales)
         self.deadlines_group = self._create_deadlines_section()
         content_layout.addWidget(self.deadlines_group)
 
@@ -273,18 +277,25 @@ class DashboardTab(QWidget):
         main_layout.setSpacing(15)
         main_layout.setContentsMargins(15, 15, 15, 15)
 
-        # GAUCHE : Tuiles KPI
-        left_layout = QVBoxLayout()
+        # GAUCHE : Tuiles KPI (CRITIQUE en violet d'abord, puis WARNING en orange)
+        left_layout = QGridLayout()
         left_layout.setSpacing(10)
         left_layout.setContentsMargins(5, 5, 5, 5)
 
-        self.warning_client_tile = self._create_kpi_tile("Warning Vision Client", "3", "#FF9800", "")
-        left_layout.addWidget(self.warning_client_tile)
+        # Ligne 1 : CRITIQUE (violet #7030A0)
+        self.critique_client_tile = self._create_kpi_tile("Critique Vision Client", "0", "#7030A0", "")
+        left_layout.addWidget(self.critique_client_tile, 0, 0)
 
-        self.warning_internal_tile = self._create_kpi_tile("Warning Vision Interne", "9", "#FF5722", "")
-        left_layout.addWidget(self.warning_internal_tile)
+        self.critique_internal_tile = self._create_kpi_tile("Critique Vision Interne", "0", "#7030A0", "")
+        left_layout.addWidget(self.critique_internal_tile, 0, 1)
 
-        left_layout.addStretch()
+        # Ligne 2 : WARNING (orange foncé #E67E00 pour lisibilité)
+        self.warning_client_tile = self._create_kpi_tile("Warning Vision Client", "0", "#E67E00", "")
+        left_layout.addWidget(self.warning_client_tile, 1, 0)
+
+        self.warning_internal_tile = self._create_kpi_tile("Warning Vision Interne", "0", "#E67E00", "")
+        left_layout.addWidget(self.warning_internal_tile, 1, 1)
+
         left_widget = QWidget()
         left_widget.setLayout(left_layout)
         main_layout.addWidget(left_widget)
@@ -300,9 +311,9 @@ class DashboardTab(QWidget):
         right_layout = QHBoxLayout()
         right_layout.setSpacing(10)
 
-        # Graphique Warnings par BU
-        self.chart_warnings_bu = self._create_bar_chart("Warnings par BU", color='#FF9800')
-        right_layout.addWidget(self.chart_warnings_bu, stretch=1)
+        # Graphique Critiques & Warnings par BU
+        self.chart_critiques_warnings_bu = self._create_bar_chart("Critiques & Warnings par BU", color='#7030A0')
+        right_layout.addWidget(self.chart_critiques_warnings_bu, stretch=1)
 
         # Actions par acteur (style calendrier)
         self.actions_calendar = self._create_actions_calendar()
@@ -384,6 +395,202 @@ class DashboardTab(QWidget):
 
         fig.tight_layout()
         canvas.draw()
+
+    def _update_critiques_warnings_chart(self, widget: QWidget, data: Dict[str, List[Dict[str, Any]]]):
+        """Met à jour le graphique Critiques & Warnings par BU avec barres groupées."""
+        import numpy as np
+
+        canvas = None
+        for child in widget.children():
+            if isinstance(child, FigureCanvas):
+                canvas = child
+                break
+
+        if not canvas:
+            return
+
+        critiques = data.get('critiques', [])
+        warnings = data.get('warnings', [])
+
+        # Obtenir la liste de toutes les BU uniques
+        all_bus = set()
+        for item in critiques:
+            all_bus.add(item['bu'])
+        for item in warnings:
+            all_bus.add(item['bu'])
+        all_bus = sorted(all_bus, key=str.lower)
+
+        # Créer les dictionnaires pour lookup rapide
+        critiques_dict = {item['bu']: item['count'] for item in critiques}
+        warnings_dict = {item['bu']: item['count'] for item in warnings}
+
+        # Préparer les données
+        critique_values = [critiques_dict.get(bu, 0) for bu in all_bus]
+        warning_values = [warnings_dict.get(bu, 0) for bu in all_bus]
+
+        fig = canvas.figure
+        fig.clear()
+        ax = fig.add_subplot(111)
+
+        if all_bus:
+            x = np.arange(len(all_bus))
+            width = 0.35
+
+            # Barres critiques (violet #7030A0)
+            bars_c = ax.bar(x - width/2, critique_values, width, label='Critiques', color='#7030A0', alpha=0.9)
+            # Barres warnings (orange #FFC000)
+            bars_w = ax.bar(x + width/2, warning_values, width, label='Warnings', color='#FFC000', alpha=0.9)
+
+            ax.set_xticks(x)
+            ax.set_xticklabels(all_bus, rotation=45, ha='right', fontsize=8)
+            ax.set_ylabel('Nombre', fontsize=9)
+            ax.tick_params(axis='both', labelsize=8)
+            ax.grid(axis='y', alpha=0.3)
+            ax.legend(fontsize=8)
+
+            # Valeurs sur les barres
+            for bar in bars_c:
+                height = bar.get_height()
+                if height > 0:
+                    ax.text(bar.get_x() + bar.get_width()/2., height,
+                           f'{int(height)}', ha='center', va='bottom', fontsize=7, color='#7030A0')
+            for bar in bars_w:
+                height = bar.get_height()
+                if height > 0:
+                    ax.text(bar.get_x() + bar.get_width()/2., height,
+                           f'{int(height)}', ha='center', va='bottom', fontsize=7, color='#E67E00')
+        else:
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes)
+
+        fig.tight_layout()
+        canvas.draw()
+
+    def _create_alertes_section(self) -> QGroupBox:
+        """Section ALERTES : Projets CRITIQUE et WARNING (compact, une seule ligne)."""
+        group = QGroupBox("ALERTES")
+        group.setStyleSheet("""
+            QGroupBox {
+                background-color: #f5f5f5;
+                border: 2px solid black;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+                font-weight: bold;
+            }
+        """)
+        main_layout = QHBoxLayout()
+        main_layout.setSpacing(8)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+
+        # 4 boîtes compactes en ligne
+        self.critique_client_box = self._create_compact_alert_box(
+            "CRITIQUE Client", "#7030A0"
+        )
+        main_layout.addWidget(self.critique_client_box)
+
+        self.critique_internal_box = self._create_compact_alert_box(
+            "CRITIQUE Interne", "#9B59B6"
+        )
+        main_layout.addWidget(self.critique_internal_box)
+
+        self.warning_client_box = self._create_compact_alert_box(
+            "WARNING Client", "#E67E00"
+        )
+        main_layout.addWidget(self.warning_client_box)
+
+        self.warning_internal_box = self._create_compact_alert_box(
+            "WARNING Interne", "#FF9800"
+        )
+        main_layout.addWidget(self.warning_internal_box)
+
+        group.setLayout(main_layout)
+        return group
+
+    def _create_compact_alert_box(self, title: str, color: str) -> QFrame:
+        """Crée une boîte d'alerte compacte avec chips pour les projets."""
+        box = QFrame()
+        box.setFrameShape(QFrame.Shape.StyledPanel)
+        box.setStyleSheet(f"""
+            QFrame {{
+                background-color: white;
+                border: 2px solid {color};
+                border-radius: 5px;
+            }}
+        """)
+
+        layout = QVBoxLayout(box)
+        layout.setSpacing(3)
+        layout.setContentsMargins(0, 0, 0, 5)
+
+        # En-tête coloré compact
+        header = QLabel(title)
+        header.setStyleSheet(f"""
+            background-color: {color};
+            color: white;
+            font-weight: bold;
+            font-size: 9pt;
+            padding: 4px 10px;
+            border-top-left-radius: 3px;
+            border-top-right-radius: 3px;
+        """)
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
+
+        # Zone pour les chips avec wrap (GridLayout pour simuler flow)
+        chips_widget = QWidget()
+        chips_layout = QGridLayout(chips_widget)
+        chips_layout.setSpacing(4)
+        chips_layout.setContentsMargins(5, 3, 5, 0)
+
+        layout.addWidget(chips_widget)
+
+        # Stocker références
+        box.chips_widget = chips_widget
+        box.chips_layout = chips_layout
+        box.header = header
+        box.color = color
+
+        return box
+
+    def _update_alert_list(self, box: QFrame, projects: List[Dict[str, Any]], color: str):
+        """Met à jour les chips de projets dans une boîte d'alerte (TOUS les projets)."""
+        # Nettoyer les anciens chips
+        while box.chips_layout.count():
+            item = box.chips_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        # Mettre à jour le header avec le compteur
+        current_title = box.header.text().split(" (")[0]
+        box.header.setText(f"{current_title} ({len(projects)})")
+
+        if not projects:
+            empty_label = QLabel("-")
+            empty_label.setStyleSheet("color: #aaa; font-style: italic; padding: 2px;")
+            box.chips_layout.addWidget(empty_label, 0, 0)
+        else:
+            # Afficher TOUS les projets en grille (4 colonnes max)
+            cols = 4
+            for i, proj in enumerate(projects):
+                row = i // cols
+                col = i % cols
+
+                chip = QLabel(proj['client_name'])
+                chip.setStyleSheet(f"""
+                    background-color: {box.color}20;
+                    color: {box.color};
+                    border: 1px solid {box.color};
+                    border-radius: 8px;
+                    padding: 2px 6px;
+                    font-size: 8pt;
+                    font-weight: bold;
+                """)
+                chip.setCursor(Qt.CursorShape.PointingHandCursor)
+                chip.setToolTip(
+                    f"Chef de projet: {proj.get('project_manager', 'N/A')}\n"
+                    f"Acteur: {proj.get('next_actor', 'N/A')}"
+                )
+                box.chips_layout.addWidget(chip, row, col)
 
     def _create_deadlines_section(self) -> QGroupBox:
         """Section Deadlines avec tuiles horizontales épurées."""
@@ -652,13 +859,26 @@ class DashboardTab(QWidget):
             managers = calc.get_projects_by_manager(self.current_week)
             self._update_bar_chart(self.chart_manager, managers, 'project_manager', 'count')
 
-            # Actualité Client - Tuiles KPI
+            # ALERTES - Listes des projets CRITIQUE et WARNING
+            critique_client_projects = calc.get_projects_critique_client(self.current_week)
+            critique_internal_projects = calc.get_projects_critique_internal(self.current_week)
+            warning_client_projects = calc.get_projects_warning_client(self.current_week)
+            warning_internal_projects = calc.get_projects_warning_internal(self.current_week)
+
+            self._update_alert_list(self.critique_client_box, critique_client_projects, "#7030A0")
+            self._update_alert_list(self.critique_internal_box, critique_internal_projects, "#7030A0")
+            self._update_alert_list(self.warning_client_box, warning_client_projects, "#E67E00")
+            self._update_alert_list(self.warning_internal_box, warning_internal_projects, "#E67E00")
+
+            # Actualité Client - Tuiles KPI (CRITIQUE en violet, WARNING en orange)
+            self.critique_client_tile.value_label.setText(str(indicators['critique_vision_client']))
+            self.critique_internal_tile.value_label.setText(str(indicators['critique_vision_internal']))
             self.warning_client_tile.value_label.setText(str(indicators['warning_vision_client']))
             self.warning_internal_tile.value_label.setText(str(indicators['warning_vision_internal']))
 
-            # Actualité Client - Graphique Warnings par BU
-            warnings_bu = calc.get_warnings_by_bu(self.current_week)
-            self._update_bar_chart(self.chart_warnings_bu, warnings_bu, 'bu', 'count')
+            # Actualité Client - Graphique Critiques & Warnings par BU
+            critiques_warnings_bu = calc.get_critiques_and_warnings_by_bu(self.current_week)
+            self._update_critiques_warnings_chart(self.chart_critiques_warnings_bu, critiques_warnings_bu)
 
             # Actualité Client - Actions par acteur (calendrier)
             actions_data = calc.get_actions_by_actor_with_clients(self.current_week)
