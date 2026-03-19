@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QComboBox, QGroupBox, QTableWidget, QTableWidgetItem,
     QScrollArea, QFrame, QGridLayout, QSizePolicy, QHeaderView,
-    QSplitter
+    QSplitter, QListWidget, QListWidgetItem, QCheckBox, QPushButton
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QColor
@@ -304,17 +304,44 @@ class CDPTab(QWidget):
         main_layout.setSpacing(10)
         main_layout.setContentsMargins(15, 15, 15, 15)
 
-        # Filtre CDP
+        # Filtre CDP multi-select
         filter_layout = QHBoxLayout()
-        filter_label = QLabel("Filtrer par Chef de Projet :")
+        filter_label = QLabel("Filtrer par Chef de Projet (cocher pour comparer) :")
         filter_label.setStyleSheet("font-weight: bold;")
         filter_layout.addWidget(filter_label)
 
-        self.cdp_filter_combo = QComboBox()
-        self.cdp_filter_combo.setMinimumWidth(200)
-        self.cdp_filter_combo.addItem("Tous les CDP", None)
-        self.cdp_filter_combo.currentIndexChanged.connect(self.on_cdp_filter_changed)
-        filter_layout.addWidget(self.cdp_filter_combo)
+        # Liste avec checkboxes
+        self.cdp_filter_list = QListWidget()
+        self.cdp_filter_list.setMaximumHeight(120)
+        self.cdp_filter_list.setMinimumWidth(250)
+        self.cdp_filter_list.setStyleSheet("""
+            QListWidget {
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                background-color: white;
+            }
+            QListWidget::item {
+                padding: 3px;
+            }
+        """)
+        filter_layout.addWidget(self.cdp_filter_list)
+
+        # Boutons de sélection rapide
+        btn_layout = QVBoxLayout()
+        btn_layout.setSpacing(5)
+
+        self.btn_select_all = QPushButton("Tout")
+        self.btn_select_all.setMaximumWidth(80)
+        self.btn_select_all.clicked.connect(self._select_all_cdp)
+        btn_layout.addWidget(self.btn_select_all)
+
+        self.btn_clear_all = QPushButton("Aucun")
+        self.btn_clear_all.setMaximumWidth(80)
+        self.btn_clear_all.clicked.connect(self._clear_all_cdp)
+        btn_layout.addWidget(self.btn_clear_all)
+
+        btn_layout.addStretch()
+        filter_layout.addLayout(btn_layout)
 
         filter_layout.addStretch()
         main_layout.addLayout(filter_layout)
@@ -338,6 +365,10 @@ class CDPTab(QWidget):
         # Graphique évolution NPS
         self.chart_evolution_nps = self._create_line_chart("Évolution NPS", "#00BCD4")
         charts_layout.addWidget(self.chart_evolution_nps, 1, 1)
+
+        # Graphique évolution temps facturable en main (matelas d'activité)
+        self.chart_evolution_facturable = self._create_line_chart("Évolution Temps Facturable en Main (jours)", "#9C27B0")
+        charts_layout.addWidget(self.chart_evolution_facturable, 2, 0)
 
         main_layout.addLayout(charts_layout)
 
@@ -508,21 +539,49 @@ class CDPTab(QWidget):
             self.refresh_data()
 
     def _load_cdp_filter(self):
-        """Charge la liste des CDP dans le filtre."""
+        """Charge la liste des CDP dans le filtre avec checkboxes."""
         try:
             calc = DashboardCalculator(self.db)
             cdp_names = calc.get_all_cdp_names()
 
-            self.cdp_filter_combo.blockSignals(True)
-            self.cdp_filter_combo.clear()
-            self.cdp_filter_combo.addItem("Tous les CDP", None)
+            self.cdp_filter_list.clear()
 
             for cdp in cdp_names:
-                self.cdp_filter_combo.addItem(cdp, cdp)
+                item = QListWidgetItem(cdp)
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                item.setCheckState(Qt.CheckState.Unchecked)
+                self.cdp_filter_list.addItem(item)
 
-            self.cdp_filter_combo.blockSignals(False)
+            # Connecter le signal de changement
+            self.cdp_filter_list.itemChanged.connect(self.on_cdp_filter_changed)
+
         except Exception as e:
             logger.error(f"Erreur chargement filtre CDP: {e}")
+
+    def _select_all_cdp(self):
+        """Sélectionne tous les CDP."""
+        self.cdp_filter_list.blockSignals(True)
+        for i in range(self.cdp_filter_list.count()):
+            self.cdp_filter_list.item(i).setCheckState(Qt.CheckState.Checked)
+        self.cdp_filter_list.blockSignals(False)
+        self.refresh_evolution_charts()
+
+    def _clear_all_cdp(self):
+        """Désélectionne tous les CDP."""
+        self.cdp_filter_list.blockSignals(True)
+        for i in range(self.cdp_filter_list.count()):
+            self.cdp_filter_list.item(i).setCheckState(Qt.CheckState.Unchecked)
+        self.cdp_filter_list.blockSignals(False)
+        self.refresh_evolution_charts()
+
+    def _get_selected_cdps(self) -> list:
+        """Retourne la liste des CDP cochés."""
+        selected = []
+        for i in range(self.cdp_filter_list.count()):
+            item = self.cdp_filter_list.item(i)
+            if item.checkState() == Qt.CheckState.Checked:
+                selected.append(item.text())
+        return selected
 
     def on_week_changed(self, index: int):
         """Gère le changement de semaine."""
@@ -534,7 +593,7 @@ class CDPTab(QWidget):
             self.current_week = week
             self.refresh_data()
 
-    def on_cdp_filter_changed(self, index: int):
+    def on_cdp_filter_changed(self, item=None):
         """Gère le changement de filtre CDP."""
         self.refresh_evolution_charts()
 
@@ -556,52 +615,132 @@ class CDPTab(QWidget):
             logger.error(f"Erreur lors du rafraîchissement CDP: {e}")
 
     def refresh_evolution_charts(self):
-        """Rafraîchit les graphiques d'évolution."""
+        """Rafraîchit les graphiques d'évolution avec support multi-CDP."""
         try:
             calc = DashboardCalculator(self.db)
 
-            # Récupérer le CDP sélectionné
-            cdp_name = self.cdp_filter_combo.currentData()
+            # Récupérer les CDP sélectionnés
+            selected_cdps = self._get_selected_cdps()
 
-            # Récupérer les données d'évolution
-            evolution = calc.get_cdp_evolution(cdp_name)
+            # Couleurs pour les différents CDP
+            colors = ['#2196F3', '#4CAF50', '#FF9800', '#E91E63', '#9C27B0', '#00BCD4', '#FF5722', '#795548']
 
-            weeks = evolution['weeks']
+            if not selected_cdps:
+                # Aucun CDP sélectionné = afficher le total global
+                evolution = calc.get_cdp_evolution(None)
+                weeks = evolution['weeks']
 
-            # Graphique projets actifs
-            self._update_line_chart(
-                self.chart_evolution_projects,
-                weeks,
-                [{'label': 'Projets actifs', 'values': evolution['active_projects'], 'color': '#2196F3'}]
-            )
+                # Graphique projets actifs
+                self._update_line_chart(
+                    self.chart_evolution_projects,
+                    weeks,
+                    [{'label': 'Tous', 'values': evolution['active_projects'], 'color': '#2196F3'}]
+                )
 
-            # Graphique warnings (2 courbes)
-            self._update_line_chart(
-                self.chart_evolution_warnings,
-                weeks,
-                [
-                    {'label': 'Warning Client', 'values': evolution['warnings_client'], 'color': '#FF5722'},
-                    {'label': 'Warning Interne', 'values': evolution['warnings_internal'], 'color': '#FF9800'}
-                ]
-            )
+                # Graphique warnings
+                self._update_line_chart(
+                    self.chart_evolution_warnings,
+                    weeks,
+                    [
+                        {'label': 'Warning Client', 'values': evolution['warnings_client'], 'color': '#FF5722'},
+                        {'label': 'Warning Interne', 'values': evolution['warnings_internal'], 'color': '#FF9800'}
+                    ]
+                )
 
-            # Graphique taux de santé
-            self._update_line_chart(
-                self.chart_evolution_health,
-                weeks,
-                [{'label': 'Taux de santé', 'values': evolution['health_rate'], 'color': '#4CAF50'}],
-                '%'
-            )
+                # Graphique taux de santé
+                self._update_line_chart(
+                    self.chart_evolution_health,
+                    weeks,
+                    [{'label': 'Tous', 'values': evolution['health_rate'], 'color': '#4CAF50'}],
+                    '%'
+                )
 
-            # Graphique NPS (2 courbes)
-            self._update_line_chart(
-                self.chart_evolution_nps,
-                weeks,
-                [
-                    {'label': 'NPS Commercial', 'values': evolution['nps_commercial'], 'color': '#00BCD4'},
-                    {'label': 'NPS Projet', 'values': evolution['nps_project'], 'color': '#009688'}
-                ]
-            )
+                # Graphique NPS
+                self._update_line_chart(
+                    self.chart_evolution_nps,
+                    weeks,
+                    [
+                        {'label': 'NPS Commercial', 'values': evolution['nps_commercial'], 'color': '#00BCD4'},
+                        {'label': 'NPS Projet', 'values': evolution['nps_project'], 'color': '#009688'}
+                    ]
+                )
+
+                # Graphique Temps facturable
+                facturable_evolution = calc.get_facturable_evolution(None)
+                self._update_line_chart(
+                    self.chart_evolution_facturable,
+                    facturable_evolution['weeks'],
+                    [{'label': 'Total', 'values': facturable_evolution['total_facturable'], 'color': '#9C27B0'}],
+                    ' j'
+                )
+
+            else:
+                # CDP sélectionnés = afficher une courbe par CDP
+                datasets_projects = []
+                datasets_health = []
+                datasets_facturable = []
+                weeks = None
+
+                for i, cdp_name in enumerate(selected_cdps):
+                    color = colors[i % len(colors)]
+                    evolution = calc.get_cdp_evolution(cdp_name)
+
+                    if weeks is None:
+                        weeks = evolution['weeks']
+
+                    datasets_projects.append({
+                        'label': cdp_name,
+                        'values': evolution['active_projects'],
+                        'color': color
+                    })
+                    datasets_health.append({
+                        'label': cdp_name,
+                        'values': evolution['health_rate'],
+                        'color': color
+                    })
+
+                    # Temps facturable par CDP
+                    fact_evol = calc.get_facturable_evolution(cdp_name)
+                    datasets_facturable.append({
+                        'label': cdp_name,
+                        'values': fact_evol['total_facturable'],
+                        'color': color
+                    })
+
+                # Graphique projets actifs (multi-CDP)
+                self._update_line_chart(self.chart_evolution_projects, weeks, datasets_projects)
+
+                # Graphique warnings (agrégé pour tous les CDP sélectionnés)
+                evolution_all = calc.get_cdp_evolution(None)
+                self._update_line_chart(
+                    self.chart_evolution_warnings,
+                    weeks,
+                    [
+                        {'label': 'Warning Client', 'values': evolution_all['warnings_client'], 'color': '#FF5722'},
+                        {'label': 'Warning Interne', 'values': evolution_all['warnings_internal'], 'color': '#FF9800'}
+                    ]
+                )
+
+                # Graphique taux de santé (multi-CDP)
+                self._update_line_chart(self.chart_evolution_health, weeks, datasets_health, '%')
+
+                # Graphique NPS (agrégé)
+                self._update_line_chart(
+                    self.chart_evolution_nps,
+                    weeks,
+                    [
+                        {'label': 'NPS Commercial', 'values': evolution_all['nps_commercial'], 'color': '#00BCD4'},
+                        {'label': 'NPS Projet', 'values': evolution_all['nps_project'], 'color': '#009688'}
+                    ]
+                )
+
+                # Graphique Temps facturable (multi-CDP)
+                self._update_line_chart(
+                    self.chart_evolution_facturable,
+                    weeks,
+                    datasets_facturable,
+                    ' j'
+                )
 
         except Exception as e:
             logger.error(f"Erreur lors du rafraîchissement évolution: {e}")

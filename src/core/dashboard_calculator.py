@@ -1163,3 +1163,194 @@ class DashboardCalculator:
 
         return result
 
+    # ============================================================
+    # MÉTHODES TEMPS FACTURABLE (Matelas d'activité)
+    # ============================================================
+
+    def get_facturable_evolution(self, cdp_name: str = None) -> Dict[str, Any]:
+        """
+        Récupère l'évolution du temps facturable en main par semaine.
+
+        Args:
+            cdp_name: Nom du CDP (si None, agrège tous les CDP)
+
+        Returns:
+            Dict avec weeks, total_facturable (somme des jours facturable par semaine)
+        """
+        from datetime import datetime
+
+        available_weeks = self.db.get_available_weeks()
+
+        if not available_weeks:
+            return {
+                'weeks': [],
+                'week_numbers': [],
+                'total_facturable': []
+            }
+
+        # Tri chronologique
+        current_week = datetime.now().isocalendar()[1]
+
+        def chronological_sort(week: int) -> int:
+            if week > current_week:
+                return week - 100
+            else:
+                return week
+
+        weeks = sorted(available_weeks, key=chronological_sort)
+        total_facturable = []
+
+        for week in weeks:
+            if cdp_name:
+                # Total pour un CDP spécifique
+                result = self._get_facturable_by_cdp(week, cdp_name)
+            else:
+                # Total global
+                result = self._get_facturable_total(week)
+
+            total_facturable.append(result)
+
+        return {
+            'weeks': [f"S{w}" for w in weeks],
+            'week_numbers': weeks,
+            'total_facturable': total_facturable
+        }
+
+    def _get_facturable_total(self, week: int) -> float:
+        """Récupère le total temps facturable pour une semaine (tous projets actifs)."""
+        result = self.db.execute_scalar(
+            """SELECT COALESCE(SUM(days_facturable_main), 0)
+               FROM projects
+               WHERE week_number = ?
+               AND status = 'EN COURS'
+               AND days_facturable_main IS NOT NULL""",
+            (week,)
+        )
+        return round(result or 0, 1)
+
+    def _get_facturable_by_cdp(self, week: int, cdp_name: str) -> float:
+        """Récupère le total temps facturable pour un CDP et une semaine."""
+        result = self.db.execute_scalar(
+            """SELECT COALESCE(SUM(days_facturable_main), 0)
+               FROM projects
+               WHERE week_number = ?
+               AND status = 'EN COURS'
+               AND COALESCE(project_manager, 'Non défini') = ?
+               AND days_facturable_main IS NOT NULL""",
+            (week, cdp_name)
+        )
+        return round(result or 0, 1)
+
+    def get_facturable_by_cdp_ranking(self, week: int) -> List[Dict[str, Any]]:
+        """
+        Classement des CDP par temps facturable en main.
+
+        Returns:
+            Liste triée par temps facturable décroissant
+        """
+        query = """
+            SELECT
+                COALESCE(project_manager, 'Non défini') as project_manager,
+                COALESCE(SUM(days_facturable_main), 0) as total_facturable,
+                COUNT(*) as active_projects
+            FROM projects
+            WHERE week_number = ?
+            AND status = 'EN COURS'
+            GROUP BY project_manager
+            HAVING total_facturable > 0
+            ORDER BY total_facturable DESC
+        """
+
+        cursor = self.db.conn.cursor()
+        cursor.execute(query, (week,))
+        rows = cursor.fetchall()
+
+        return [{'project_manager': row['project_manager'],
+                 'total_facturable': round(row['total_facturable'], 1),
+                 'active_projects': row['active_projects']} for row in rows]
+
+    def get_facturable_by_bu(self, week: int) -> List[Dict[str, Any]]:
+        """
+        Temps facturable par BU/Techno.
+
+        Returns:
+            Liste triée par temps facturable décroissant
+        """
+        query = """
+            SELECT
+                COALESCE(bu, 'Non défini') as bu,
+                COALESCE(SUM(days_facturable_main), 0) as total_facturable,
+                COUNT(*) as project_count
+            FROM projects
+            WHERE week_number = ?
+            AND status = 'EN COURS'
+            GROUP BY bu
+            HAVING total_facturable > 0
+            ORDER BY total_facturable DESC
+        """
+
+        cursor = self.db.conn.cursor()
+        cursor.execute(query, (week,))
+        rows = cursor.fetchall()
+
+        return [{'bu': row['bu'],
+                 'total_facturable': round(row['total_facturable'], 1),
+                 'project_count': row['project_count']} for row in rows]
+
+    def get_facturable_by_contract_type(self, week: int) -> List[Dict[str, Any]]:
+        """
+        Temps facturable par type de contrat (Build/Run/Forfait/Régie...).
+
+        Returns:
+            Liste triée par temps facturable décroissant
+        """
+        query = """
+            SELECT
+                COALESCE(contract_type, 'Non défini') as contract_type,
+                COALESCE(SUM(days_facturable_main), 0) as total_facturable,
+                COUNT(*) as project_count
+            FROM projects
+            WHERE week_number = ?
+            AND status = 'EN COURS'
+            GROUP BY contract_type
+            HAVING total_facturable > 0
+            ORDER BY total_facturable DESC
+        """
+
+        cursor = self.db.conn.cursor()
+        cursor.execute(query, (week,))
+        rows = cursor.fetchall()
+
+        return [{'contract_type': row['contract_type'],
+                 'total_facturable': round(row['total_facturable'], 1),
+                 'project_count': row['project_count']} for row in rows]
+
+    def get_facturable_by_client(self, week: int) -> List[Dict[str, Any]]:
+        """
+        Temps facturable par client.
+
+        Returns:
+            Liste triée par temps facturable décroissant (top clients)
+        """
+        query = """
+            SELECT
+                COALESCE(client_name, 'Non défini') as client_name,
+                COALESCE(SUM(days_facturable_main), 0) as total_facturable,
+                COUNT(*) as project_count
+            FROM projects
+            WHERE week_number = ?
+            AND status = 'EN COURS'
+            GROUP BY client_name
+            HAVING total_facturable > 0
+            ORDER BY total_facturable DESC
+            LIMIT 20
+        """
+
+        cursor = self.db.conn.cursor()
+        cursor.execute(query, (week,))
+        rows = cursor.fetchall()
+
+        return [{'client_name': row['client_name'],
+                 'total_facturable': round(row['total_facturable'], 1),
+                 'project_count': row['project_count']} for row in rows]
+

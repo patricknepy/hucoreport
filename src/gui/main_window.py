@@ -20,6 +20,7 @@ from src.gui.kpi_tab import KPITab
 from src.gui.exploitation_tab import ExploitationTab
 from src.gui.cdp_tab import CDPTab
 from src.gui.warnings_tab import WarningsTab
+from src.gui.engagements_tab import EngagementsTab
 from src.gui.import_dialog import ImportDialog
 from src.core.excel_importer import ExcelImporter
 
@@ -46,6 +47,7 @@ class MainWindow(QMainWindow):
         self.exploitation_tab = None
         self.cdp_tab = None
         self.warnings_tab = None
+        self.engagements_tab = None
         self.init_ui()
         self.showMaximized()  # Plein écran au démarrage
 
@@ -200,7 +202,11 @@ class MainWindow(QMainWindow):
         warnings_tab = self.create_warnings_tab()
         tabs.addTab(warnings_tab, "Warnings")
 
-        # Onglet 7 : Rapports
+        # Onglet 7 : Engagements CDP S+1
+        engagements_tab = self.create_engagements_tab()
+        tabs.addTab(engagements_tab, "Engagements")
+
+        # Onglet 8 : Rapports
         reports_tab = self.create_reports_tab()
         tabs.addTab(reports_tab, "Rapports")
 
@@ -239,6 +245,11 @@ class MainWindow(QMainWindow):
         """Crée l'onglet Warnings (synthèse des warnings)"""
         self.warnings_tab = WarningsTab()
         return self.warnings_tab
+
+    def create_engagements_tab(self):
+        """Crée l'onglet Engagements CDP S+1"""
+        self.engagements_tab = EngagementsTab()
+        return self.engagements_tab
 
     def create_reports_tab(self):
         """Crée l'onglet Rapports"""

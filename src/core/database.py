@@ -97,7 +97,10 @@ class Database:
                     project_code TEXT,
                     days_sold INTEGER,
 
-                    -- GROUPE 2 : NPS (2 champs)
+                    -- GROUPE 2 : TEMPS FACTURABLE (1 champ)
+                    days_facturable_main REAL,
+
+                    -- GROUPE 3 : NPS (2 champs)
                     nps_commercial INTEGER CHECK(nps_commercial BETWEEN -100 AND 100 OR nps_commercial IS NULL),
                     nps_project INTEGER CHECK(nps_project BETWEEN -100 AND 100 OR nps_project IS NULL),
 
@@ -182,6 +185,7 @@ class Database:
             ('comment_vision_internal', 'TEXT', 'comment_vision_client'),
             ('upsell', 'TEXT', 'dli'),
             ('crosssell', 'TEXT', 'upsell'),
+            ('days_facturable_main', 'REAL', 'days_sold'),
         ]
 
         try:

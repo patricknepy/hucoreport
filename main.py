@@ -89,12 +89,50 @@ def main():
         app.setOrganizationDomain("humansconnexion.com")
         
         logger.info("Application Qt créée")
-        
+
         # Active le High DPI scaling pour les écrans modernes
         QApplication.setHighDpiScaleFactorRoundingPolicy(
             Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
         )
-        
+
+        # Style global pour les scrollbars (plus larges et visibles)
+        app.setStyleSheet("""
+            QScrollBar:vertical {
+                background-color: #f0f0f0;
+                width: 16px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #888;
+                min-height: 30px;
+                border-radius: 7px;
+                margin: 2px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #666;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar:horizontal {
+                background-color: #f0f0f0;
+                height: 16px;
+                margin: 0px;
+            }
+            QScrollBar::handle:horizontal {
+                background-color: #888;
+                min-width: 30px;
+                border-radius: 7px;
+                margin: 2px;
+            }
+            QScrollBar::handle:horizontal:hover {
+                background-color: #666;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                width: 0px;
+            }
+        """)
+
         logger.info("Création de la fenêtre principale...")
         # Création et affichage de la fenêtre principale
         window = MainWindow()

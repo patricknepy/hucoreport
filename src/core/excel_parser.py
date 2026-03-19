@@ -230,6 +230,42 @@ class ExcelParser:
             logger.warning(f"Impossible de convertir en entier : {value}")
             return None
 
+    def _convert_to_float(self, value: Any) -> Optional[float]:
+        """
+        Convertit une valeur Excel en float.
+
+        Args:
+            value: Valeur Excel
+
+        Returns:
+            Float ou None
+        """
+        if value is None or value == '':
+            return None
+
+        try:
+            # Si c'est déjà un nombre
+            if isinstance(value, (int, float)):
+                return float(value)
+
+            # Si c'est un str
+            if isinstance(value, str):
+                value_stripped = value.strip()
+                if value_stripped == '':
+                    return None
+                # Détecter les erreurs Excel
+                if value_stripped.startswith('#') and ('!' in value_stripped or value_stripped == '#N/A'):
+                    logger.warning(f"Erreur Excel detectee : {value_stripped}.")
+                    return None
+                # Gérer la virgule française comme séparateur décimal
+                value_normalized = value_stripped.replace(',', '.')
+                return float(value_normalized)
+
+            return float(value)
+        except (ValueError, TypeError):
+            logger.warning(f"Impossible de convertir en float : {value}")
+            return None
+
     def _convert_to_text(self, value: Any) -> Optional[str]:
         """
         Convertit une valeur Excel en texte.
@@ -282,13 +318,15 @@ class ExcelParser:
 
         Args:
             value: Valeur Excel
-            expected_type: Type attendu (INTEGER, DATE, TEXT, BOOLEAN)
+            expected_type: Type attendu (INTEGER, DATE, TEXT, BOOLEAN, FLOAT)
 
         Returns:
             Valeur convertie
         """
         if expected_type == 'INTEGER':
             return self._convert_to_integer(value)
+        elif expected_type == 'FLOAT':
+            return self._convert_to_float(value)
         elif expected_type == 'DATE':
             return self._convert_to_date(value)
         elif expected_type == 'BOOLEAN':
@@ -355,6 +393,7 @@ class ExcelParser:
             'dispositif_expandable': (['dispositif', 'augmentable'], 'TEXT', []),
             'days_forfait': (['jours', 'forfait'], 'INTEGER', []),
             'days_to_sign': (['jours', 'signer'], 'INTEGER', []),
+            'days_facturable_main': (['temps', 'facturable', 'main'], 'FLOAT', []),
             'start_date': (['date', 'démarrage'], 'DATE', []),
             'data_remarks': (['remarques', 'data'], 'TEXT', []),
             'remarks_3months': (['objectifs', '3', 'mois'], 'TEXT', []),

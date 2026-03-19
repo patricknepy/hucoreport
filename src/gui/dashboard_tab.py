@@ -66,17 +66,17 @@ class DashboardTab(QWidget):
         content_layout.setSpacing(8)
         content_layout.setContentsMargins(5, 5, 5, 5)
 
-        # ALERTES EN PREMIER (CRITIQUE et WARNING)
-        self.alertes_group = self._create_alertes_section()
-        content_layout.addWidget(self.alertes_group)
+        # SECTION PIPE EN PREMIER (temps facturable en main)
+        self.pipe_group = self._create_pipe_section()
+        content_layout.addWidget(self.pipe_group)
+
+        # VUE GLOBALE (chiffres + graphiques)
+        self.vue_globale_group = self._create_vue_globale()
+        content_layout.addWidget(self.vue_globale_group)
 
         # DEADLINES (tuiles horizontales)
         self.deadlines_group = self._create_deadlines_section()
         content_layout.addWidget(self.deadlines_group)
-
-        # VUE GLOBALE (3 colonnes)
-        self.vue_globale_group = self._create_vue_globale()
-        content_layout.addWidget(self.vue_globale_group)
 
         # ACTUALITÉ CLIENT (3 colonnes)
         self.actualite_group = self._create_actualite_client()
@@ -85,6 +85,10 @@ class DashboardTab(QWidget):
         # RDV Client
         self.rdv_group = self._create_rdv_section()
         content_layout.addWidget(self.rdv_group)
+
+        # ALERTES EN BAS (CRITIQUE et WARNING)
+        self.alertes_group = self._create_alertes_section()
+        content_layout.addWidget(self.alertes_group)
 
         content_layout.addStretch()
         content_widget.setLayout(content_layout)
@@ -117,6 +121,212 @@ class DashboardTab(QWidget):
         widget.setLayout(layout)
         return widget
 
+    def _create_pipe_section(self) -> QGroupBox:
+        """Section PIPE : Vue complète du temps facturable en main (style moderne gris)."""
+        group = QGroupBox("PIPE - GÉNÉRATION DE BUSINESS")
+        group.setStyleSheet("""
+            QGroupBox {
+                background-color: #fafafa;
+                border: 2px solid #424242;
+                border-radius: 8px;
+                margin-top: 12px;
+                padding-top: 12px;
+                font-weight: bold;
+                font-size: 11pt;
+            }
+            QGroupBox::title {
+                color: #212121;
+            }
+        """)
+
+        main_layout = QVBoxLayout()
+        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(15, 20, 15, 15)
+
+        # LIGNE 1 : KPIs principaux + Evolution
+        row1_layout = QHBoxLayout()
+        row1_layout.setSpacing(15)
+
+        # Bloc KPI Total
+        self.pipe_total_tile = self._create_modern_kpi_tile("TOTAL PIPE", "0 j", "#424242")
+        row1_layout.addWidget(self.pipe_total_tile)
+
+        # Graphique évolution du pipe (plus grand)
+        self.chart_pipe_evolution = self._create_modern_line_chart("Évolution du Pipe (semaines)", "#616161")
+        row1_layout.addWidget(self.chart_pipe_evolution, stretch=3)
+
+        main_layout.addLayout(row1_layout)
+
+        # LIGNE 2 : 4 graphiques en colonnes
+        row2_layout = QHBoxLayout()
+        row2_layout.setSpacing(12)
+
+        # Par Chef de Projet
+        self.chart_pipe_by_cdp = self._create_modern_bar_chart("Par Chef de Projet", "#757575")
+        row2_layout.addWidget(self.chart_pipe_by_cdp, stretch=1)
+
+        # Par Techno (BU)
+        self.chart_pipe_by_bu = self._create_modern_bar_chart("Par Techno (BU)", "#9E9E9E")
+        row2_layout.addWidget(self.chart_pipe_by_bu, stretch=1)
+
+        # Par Type (Build/Run) - sera un pie chart
+        self.chart_pipe_by_type = self._create_modern_pie_chart("Build vs Run", "#BDBDBD")
+        row2_layout.addWidget(self.chart_pipe_by_type, stretch=1)
+
+        # Par Client (Top 10)
+        self.chart_pipe_by_client = self._create_modern_bar_chart("Top Clients", "#E0E0E0")
+        row2_layout.addWidget(self.chart_pipe_by_client, stretch=1)
+
+        main_layout.addLayout(row2_layout)
+
+        group.setLayout(main_layout)
+        return group
+
+    def _create_modern_kpi_tile(self, title: str, value: str, color: str) -> QFrame:
+        """Crée une tuile KPI moderne style gris."""
+        tile = QFrame()
+        tile.setStyleSheet(f"""
+            QFrame {{
+                background-color: {color};
+                border-radius: 10px;
+            }}
+        """)
+        tile.setFixedWidth(150)
+        tile.setFixedHeight(150)
+
+        layout = QVBoxLayout(tile)
+        layout.setSpacing(5)
+        layout.setContentsMargins(10, 15, 10, 15)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Valeur
+        value_label = QLabel(value)
+        value_label.setStyleSheet("font-size: 32pt; color: white; font-weight: bold;")
+        value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(value_label)
+
+        # Titre
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-size: 10pt; color: #e0e0e0; font-weight: bold;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setWordWrap(True)
+        layout.addWidget(title_label)
+
+        tile.value_label = value_label
+        return tile
+
+    def _create_modern_line_chart(self, title: str, color: str) -> QWidget:
+        """Crée un graphique en ligne style moderne gris."""
+        widget = QWidget()
+        widget.setStyleSheet("""
+            QWidget {
+                background-color: #f5f5f5;
+                border-radius: 8px;
+            }
+        """)
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(5)
+        layout.setContentsMargins(10, 10, 10, 10)
+
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-weight: bold; font-size: 10pt; color: #424242;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
+
+        fig = Figure(figsize=(6, 2.5), dpi=100)
+        fig.patch.set_facecolor('#f5f5f5')
+        canvas = FigureCanvas(fig)
+        canvas.setMinimumHeight(150)
+
+        canvas.figure = fig
+        canvas.chart_color = color
+
+        layout.addWidget(canvas, stretch=1)
+        return widget
+
+    def _create_modern_bar_chart(self, title: str, color: str) -> QWidget:
+        """Crée un graphique à barres style moderne gris."""
+        widget = QWidget()
+        widget.setStyleSheet("""
+            QWidget {
+                background-color: #f5f5f5;
+                border-radius: 8px;
+            }
+        """)
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(3)
+        layout.setContentsMargins(8, 8, 8, 8)
+
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-weight: bold; font-size: 9pt; color: #424242;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
+
+        fig = Figure(figsize=(3, 3), dpi=100)
+        fig.patch.set_facecolor('#f5f5f5')
+        canvas = FigureCanvas(fig)
+        canvas.setMinimumHeight(180)
+
+        canvas.figure = fig
+        canvas.chart_color = color
+
+        layout.addWidget(canvas, stretch=1)
+        return widget
+
+    def _create_modern_pie_chart(self, title: str, color: str) -> QWidget:
+        """Crée un graphique camembert style moderne."""
+        widget = QWidget()
+        widget.setStyleSheet("""
+            QWidget {
+                background-color: #f5f5f5;
+                border-radius: 8px;
+            }
+        """)
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(3)
+        layout.setContentsMargins(8, 8, 8, 8)
+
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-weight: bold; font-size: 9pt; color: #424242;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
+
+        fig = Figure(figsize=(3, 3), dpi=100)
+        fig.patch.set_facecolor('#f5f5f5')
+        canvas = FigureCanvas(fig)
+        canvas.setMinimumHeight(180)
+
+        canvas.figure = fig
+        canvas.chart_color = color
+
+        layout.addWidget(canvas, stretch=1)
+        return widget
+
+    def _create_mini_line_chart(self, title: str) -> QWidget:
+        """Crée un mini graphique en ligne pour l'évolution."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(3)
+        layout.setContentsMargins(5, 3, 5, 3)
+
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-weight: bold; font-size: 10pt;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
+
+        fig = Figure(figsize=(5, 2.5), dpi=100)
+        fig.patch.set_facecolor('#f3e5f5')
+        canvas = FigureCanvas(fig)
+        canvas.setMinimumHeight(150)
+        canvas.setMinimumWidth(300)
+
+        canvas.figure = fig
+        canvas.chart_color = '#9C27B0'
+
+        layout.addWidget(canvas, stretch=1)
+
+        return widget
+
     def _create_kpi_tile(self, title: str, value: str, color: str = "#2196F3", icon: str = "") -> QFrame:
         """Crée une tuile KPI stylisée (fond gris, sans bordure)."""
         tile = QFrame()
@@ -129,25 +339,25 @@ class DashboardTab(QWidget):
             }}
         """)
 
-        tile.setFixedWidth(200)
-        tile.setFixedHeight(200)
+        tile.setFixedWidth(170)
+        tile.setFixedHeight(170)
 
         layout = QVBoxLayout(tile)
-        layout.setSpacing(5)
-        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(3)
+        layout.setContentsMargins(6, 6, 6, 6)
 
         # Icône + Titre
         title_label = QLabel(f"{icon} {title}")
-        title_label.setStyleSheet(f"font-size: 14pt; color: #333; font-weight: bold;")
+        title_label.setStyleSheet(f"font-size: 12pt; color: #333; font-weight: bold;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setWordWrap(True)
-        title_label.setMinimumHeight(40)
+        title_label.setMinimumHeight(35)
         title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout.addWidget(title_label)
 
         # Valeur
         value_label = QLabel(value)
-        value_label.setStyleSheet(f"font-size: 36pt; color: {color}; font-weight: bold;")
+        value_label.setStyleSheet(f"font-size: 30pt; color: {color}; font-weight: bold;")
         value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         value_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout.addWidget(value_label)
@@ -168,17 +378,17 @@ class DashboardTab(QWidget):
             }}
         """)
         tile.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        tile.setFixedWidth(160)
-        tile.setFixedHeight(160)
+        tile.setFixedWidth(130)
+        tile.setFixedHeight(130)
 
         layout = QVBoxLayout(tile)
-        layout.setSpacing(5)
-        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(3)
+        layout.setContentsMargins(5, 5, 5, 5)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Valeur (blanc sur fond coloré)
         value_label = QLabel(value)
-        value_label.setStyleSheet("font-size: 32pt; color: white; font-weight: bold;")
+        value_label.setStyleSheet("font-size: 26pt; color: white; font-weight: bold;")
         value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         value_label.setWordWrap(False)
         value_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -186,10 +396,10 @@ class DashboardTab(QWidget):
 
         # Titre (blanc sur fond coloré)
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 10pt; color: white; font-weight: bold;")
+        title_label.setStyleSheet("font-size: 9pt; color: white; font-weight: bold;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setWordWrap(True)
-        title_label.setMinimumHeight(50)
+        title_label.setMinimumHeight(40)
         title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout.addWidget(title_label)
 
@@ -225,8 +435,8 @@ class DashboardTab(QWidget):
         self.active_tile = self._create_kpi_tile("Projets actifs", "47", "#4CAF50", "")
         left_layout.addWidget(self.active_tile, 0, 1)
 
-        self.dispositif_tile = self._create_kpi_tile("Dispositif mensuel", "245 j", "#FF9800", "")
-        left_layout.addWidget(self.dispositif_tile, 1, 0)
+        self.pipe_tile = self._create_kpi_tile("Jours dans le pipe", "0 j", "#9C27B0", "")
+        left_layout.addWidget(self.pipe_tile, 1, 0)
 
         self.expandable_tile = self._create_kpi_tile("Augmentables", "13", "#9C27B0", "")
         left_layout.addWidget(self.expandable_tile, 1, 1)
@@ -338,15 +548,15 @@ class DashboardTab(QWidget):
         layout.addWidget(title_label)
 
         # Figure matplotlib (taille adaptative)
-        fig = Figure(figsize=(5, 4), dpi=100)
+        fig = Figure(figsize=(4, 3.5), dpi=100)
         fig.patch.set_facecolor('#ffffff')
         canvas = FigureCanvas(fig)
-        canvas.setMinimumHeight(250)
-        canvas.setMinimumWidth(300)
+        canvas.setMinimumHeight(200)
+        canvas.setMinimumWidth(220)
 
         # Widget extensible
-        widget.setMinimumWidth(320)
-        widget.setMinimumHeight(280)
+        widget.setMinimumWidth(240)
+        widget.setMinimumHeight(230)
 
         canvas.figure = fig
         canvas.chart_color = color
@@ -466,7 +676,7 @@ class DashboardTab(QWidget):
         canvas.draw()
 
     def _create_alertes_section(self) -> QGroupBox:
-        """Section ALERTES : Projets CRITIQUE et WARNING (compact, une seule ligne)."""
+        """Section ALERTES : Projets CRITIQUE et WARNING (grille 2x2)."""
         group = QGroupBox("ALERTES")
         group.setStyleSheet("""
             QGroupBox {
@@ -478,30 +688,32 @@ class DashboardTab(QWidget):
                 font-weight: bold;
             }
         """)
-        main_layout = QHBoxLayout()
+        # Grille 2x2 pour éviter le dépassement horizontal
+        main_layout = QGridLayout()
         main_layout.setSpacing(8)
         main_layout.setContentsMargins(10, 10, 10, 10)
 
-        # 4 boîtes compactes en ligne
+        # Ligne 1 : CRITIQUE
         self.critique_client_box = self._create_compact_alert_box(
             "CRITIQUE Client", "#7030A0"
         )
-        main_layout.addWidget(self.critique_client_box)
+        main_layout.addWidget(self.critique_client_box, 0, 0)
 
         self.critique_internal_box = self._create_compact_alert_box(
             "CRITIQUE Interne", "#9B59B6"
         )
-        main_layout.addWidget(self.critique_internal_box)
+        main_layout.addWidget(self.critique_internal_box, 0, 1)
 
+        # Ligne 2 : WARNING
         self.warning_client_box = self._create_compact_alert_box(
             "WARNING Client", "#E67E00"
         )
-        main_layout.addWidget(self.warning_client_box)
+        main_layout.addWidget(self.warning_client_box, 1, 0)
 
         self.warning_internal_box = self._create_compact_alert_box(
             "WARNING Interne", "#FF9800"
         )
-        main_layout.addWidget(self.warning_internal_box)
+        main_layout.addWidget(self.warning_internal_box, 1, 1)
 
         group.setLayout(main_layout)
         return group
@@ -517,6 +729,10 @@ class DashboardTab(QWidget):
                 border-radius: 5px;
             }}
         """)
+        # Contrainte de largeur pour éviter le dépassement horizontal
+        box.setMinimumWidth(200)
+        box.setMaximumWidth(450)
+        box.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
         layout = QVBoxLayout(box)
         layout.setSpacing(3)
@@ -569,8 +785,8 @@ class DashboardTab(QWidget):
             empty_label.setStyleSheet("color: #aaa; font-style: italic; padding: 2px;")
             box.chips_layout.addWidget(empty_label, 0, 0)
         else:
-            # Afficher TOUS les projets en grille (4 colonnes max)
-            cols = 4
+            # Afficher TOUS les projets en grille (3 colonnes max pour tenir en largeur)
+            cols = 3
             for i, proj in enumerate(projects):
                 row = i // cols
                 col = i % cols
@@ -848,7 +1064,19 @@ class DashboardTab(QWidget):
             # Vue Globale - Tuiles KPI
             self.total_tile.value_label.setText(str(indicators['total_projects']))
             self.active_tile.value_label.setText(str(indicators['active_projects']))
-            self.dispositif_tile.value_label.setText(f"{indicators['dispositif_monthly']} j")
+
+            # Jours dans le pipe (temps facturable en main)
+            total_facturable = calc._get_facturable_total(self.current_week) if hasattr(calc, '_get_facturable_total') else 0
+            self.pipe_tile.value_label.setText(f"{total_facturable} j")
+
+            # Section PIPE - mise à jour complète
+            self.pipe_total_tile.value_label.setText(f"{total_facturable} j")
+            self._update_pipe_evolution_chart(calc)
+            self._update_pipe_by_cdp_chart(calc)
+            self._update_pipe_by_bu_chart(calc)
+            self._update_pipe_by_type_chart(calc)
+            self._update_pipe_by_client_chart(calc)
+
             self.expandable_tile.value_label.setText(str(indicators['dispositif_expandable']))
 
             # Vue Globale - Graphique Projets actifs par BU
@@ -1117,4 +1345,221 @@ class DashboardTab(QWidget):
                 column.clients_layout.addStretch()
 
         self.actions_calendar_layout.addStretch()
+
+    def _update_pipe_evolution_chart(self, calc):
+        """Met à jour le graphique d'évolution du pipe (style moderne gris)."""
+        canvas = None
+        for child in self.chart_pipe_evolution.children():
+            if isinstance(child, FigureCanvas):
+                canvas = child
+                break
+
+        if not canvas:
+            return
+
+        # Récupérer les données d'évolution
+        evolution = calc.get_facturable_evolution()
+        weeks = evolution.get('weeks', [])
+        values = evolution.get('total_facturable', [])
+
+        fig = canvas.figure
+        fig.clear()
+        ax = fig.add_subplot(111)
+
+        if weeks and values:
+            # Style gris moderne
+            ax.plot(range(len(weeks)), values, color='#424242', marker='o', markersize=6, linewidth=2.5)
+            ax.fill_between(range(len(weeks)), values, alpha=0.2, color='#757575')
+            ax.set_xticks(range(len(weeks)))
+            ax.set_xticklabels(weeks, rotation=45, ha='right', fontsize=8)
+            ax.set_ylabel('Jours', fontsize=9, color='#424242')
+            ax.grid(axis='y', alpha=0.3, color='#bdbdbd')
+            ax.tick_params(colors='#616161')
+
+            # Afficher les valeurs sur les points
+            for i, v in enumerate(values):
+                ax.text(i, v + max(values)*0.02, f'{v}', ha='center', va='bottom', fontsize=8, color='#424242', fontweight='bold')
+        else:
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#9e9e9e')
+
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_color('#bdbdbd')
+        ax.spines['bottom'].set_color('#bdbdbd')
+
+        fig.tight_layout()
+        canvas.draw()
+
+    def _update_pipe_by_cdp_chart(self, calc):
+        """Met à jour le graphique temps facturable par CDP (barres horizontales)."""
+        if not self.current_week:
+            return
+
+        canvas = None
+        for child in self.chart_pipe_by_cdp.children():
+            if isinstance(child, FigureCanvas):
+                canvas = child
+                break
+
+        if not canvas:
+            return
+
+        # Récupérer le classement des CDP
+        ranking = calc.get_facturable_by_cdp_ranking(self.current_week)
+
+        fig = canvas.figure
+        fig.clear()
+        ax = fig.add_subplot(111)
+
+        if ranking:
+            # Limiter à 8 pour lisibilité
+            data = ranking[:8]
+            labels = [r['project_manager'][:15] for r in data]
+            values = [r['total_facturable'] for r in data]
+
+            # Barres horizontales grises
+            bars = ax.barh(range(len(labels)), values, color='#616161', alpha=0.8)
+            ax.set_yticks(range(len(labels)))
+            ax.set_yticklabels(labels, fontsize=7)
+            ax.invert_yaxis()
+            ax.grid(axis='x', alpha=0.3, color='#bdbdbd')
+
+            for bar in bars:
+                width = bar.get_width()
+                ax.text(width + 0.5, bar.get_y() + bar.get_height()/2., f'{width:.0f}j',
+                       ha='left', va='center', fontsize=7, color='#424242')
+        else:
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#9e9e9e')
+
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        fig.tight_layout()
+        canvas.draw()
+
+    def _update_pipe_by_bu_chart(self, calc):
+        """Met à jour le graphique temps facturable par BU/Techno."""
+        if not self.current_week:
+            return
+
+        canvas = None
+        for child in self.chart_pipe_by_bu.children():
+            if isinstance(child, FigureCanvas):
+                canvas = child
+                break
+
+        if not canvas:
+            return
+
+        # Récupérer les données par BU
+        data = calc.get_facturable_by_bu(self.current_week)
+
+        fig = canvas.figure
+        fig.clear()
+        ax = fig.add_subplot(111)
+
+        if data:
+            labels = [d['bu'][:12] for d in data[:8]]
+            values = [d['total_facturable'] for d in data[:8]]
+
+            bars = ax.barh(range(len(labels)), values, color='#9e9e9e', alpha=0.8)
+            ax.set_yticks(range(len(labels)))
+            ax.set_yticklabels(labels, fontsize=7)
+            ax.invert_yaxis()
+            ax.grid(axis='x', alpha=0.3, color='#bdbdbd')
+
+            for bar in bars:
+                width = bar.get_width()
+                ax.text(width + 0.5, bar.get_y() + bar.get_height()/2., f'{width:.0f}j',
+                       ha='left', va='center', fontsize=7, color='#424242')
+        else:
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#9e9e9e')
+
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        fig.tight_layout()
+        canvas.draw()
+
+    def _update_pipe_by_type_chart(self, calc):
+        """Met à jour le graphique Build vs Run (pie chart)."""
+        if not self.current_week:
+            return
+
+        canvas = None
+        for child in self.chart_pipe_by_type.children():
+            if isinstance(child, FigureCanvas):
+                canvas = child
+                break
+
+        if not canvas:
+            return
+
+        # Récupérer les données par type de contrat
+        data = calc.get_facturable_by_contract_type(self.current_week)
+
+        fig = canvas.figure
+        fig.clear()
+        ax = fig.add_subplot(111)
+
+        if data and sum(d['total_facturable'] for d in data) > 0:
+            labels = [d['contract_type'] or 'Non défini' for d in data]
+            values = [d['total_facturable'] for d in data]
+
+            # Couleurs grises dégradées
+            colors = ['#424242', '#757575', '#9e9e9e', '#bdbdbd', '#e0e0e0']
+
+            wedges, texts, autotexts = ax.pie(values, labels=labels, autopct='%1.0f%%',
+                                               colors=colors[:len(values)], textprops={'fontsize': 7})
+            for autotext in autotexts:
+                autotext.set_color('white')
+                autotext.set_fontweight('bold')
+        else:
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#9e9e9e')
+
+        fig.tight_layout()
+        canvas.draw()
+
+    def _update_pipe_by_client_chart(self, calc):
+        """Met à jour le graphique Top Clients."""
+        if not self.current_week:
+            return
+
+        canvas = None
+        for child in self.chart_pipe_by_client.children():
+            if isinstance(child, FigureCanvas):
+                canvas = child
+                break
+
+        if not canvas:
+            return
+
+        # Récupérer les données par client
+        data = calc.get_facturable_by_client(self.current_week)
+
+        fig = canvas.figure
+        fig.clear()
+        ax = fig.add_subplot(111)
+
+        if data:
+            # Top 8 clients
+            top_data = data[:8]
+            labels = [d['client_name'][:12] for d in top_data]
+            values = [d['total_facturable'] for d in top_data]
+
+            bars = ax.barh(range(len(labels)), values, color='#bdbdbd', alpha=0.9)
+            ax.set_yticks(range(len(labels)))
+            ax.set_yticklabels(labels, fontsize=7)
+            ax.invert_yaxis()
+            ax.grid(axis='x', alpha=0.3, color='#e0e0e0')
+
+            for bar in bars:
+                width = bar.get_width()
+                ax.text(width + 0.5, bar.get_y() + bar.get_height()/2., f'{width:.0f}j',
+                       ha='left', va='center', fontsize=7, color='#424242')
+        else:
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#9e9e9e')
+
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        fig.tight_layout()
+        canvas.draw()
 

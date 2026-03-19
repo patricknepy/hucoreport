@@ -102,6 +102,15 @@
       "description": "Nombre de jours vendus"
     },
     "N": {
+      "expected_name": "Temps facturable en main",
+      "alternate_names": ["Temps facturable\nen main", "Temps facturable en main (220j)"],
+      "db_field": "days_facturable_main",
+      "type": "FLOAT",
+      "required": false,
+      "normalize": true,
+      "description": "Temps facturable en main - Court Terme (matelas activité 220j)"
+    },
+    "O": {
       "expected_name": "Relation Client Commer.",
       "alternate_names": ["Relation Client\nCommer."],
       "db_field": "nps_commercial",
@@ -112,7 +121,7 @@
       "normalize": true,
       "description": "NPS Relation Client Commercial"
     },
-    "O": {
+    "P": {
       "expected_name": "Relation Client Projet",
       "alternate_names": ["Relation Client\nProjet"],
       "db_field": "nps_project",
@@ -123,7 +132,7 @@
       "normalize": true,
       "description": "NPS Relation Client Projet"
     },
-    "P": {
+    "Q": {
       "expected_name": "Vision Client",
       "db_field": "vision_client",
       "type": "TEXT",
@@ -131,7 +140,7 @@
       "allowed_values": ["CRITIQUE", "critique", "WARNING", "warning", "BON", "bon", "EXCELLENT", "excellent", "NON DÉFINI", "non défini", ""],
       "description": "Actualité/État vision client (CRITIQUE, WARNING, BON, EXCELLENT, NON DÉFINI)"
     },
-    "Q": {
+    "R": {
       "expected_name": "Vision Interne",
       "db_field": "vision_internal",
       "type": "TEXT",
@@ -139,7 +148,7 @@
       "allowed_values": ["CRITIQUE", "critique", "WARNING", "warning", "BON", "bon", "EXCELLENT", "excellent", "NON DÉFINI", "non défini", ""],
       "description": "Actualité/État vision interne (CRITIQUE, WARNING, BON, EXCELLENT, NON DÉFINI)"
     },
-    "R": {
+    "S": {
       "expected_name": "Risque identifié",
       "db_field": "risk_identified",
       "type": "TEXT",
