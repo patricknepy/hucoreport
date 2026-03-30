@@ -132,7 +132,7 @@ class ImportDialog(QDialog):
         actifs_with_actor = validation.get('actifs_with_actor', 0)
         total_actifs = validation.get('total_actifs', 0)
         actor_label = QLabel(f"* Dossiers actifs avec acteur : {actifs_with_actor}/{total_actifs} ({pct_actor}%)")
-        actor_label.setStyleSheet("font-size: 11pt; color: #4CAF50;")
+        actor_label.setStyleSheet("font-size: 11pt; color: #0166FE;")
         stats_layout.addWidget(actor_label)
 
         # Ligne de séparation
@@ -216,7 +216,7 @@ class ImportDialog(QDialog):
             confirm_btn = QPushButton("Confirmer l'import")
             confirm_btn.setStyleSheet("""
                 QPushButton {
-                    background-color: #4CAF50;
+                    background-color: #0166FE;
                     color: white;
                     padding: 10px 20px;
                     font-weight: bold;
@@ -224,7 +224,7 @@ class ImportDialog(QDialog):
                     border-radius: 5px;
                 }
                 QPushButton:hover {
-                    background-color: #45A049;
+                    background-color: #0A1563;
                 }
             """)
             confirm_btn.clicked.connect(self.confirm_import)

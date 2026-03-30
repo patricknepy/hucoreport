@@ -255,6 +255,55 @@ Si ces valeurs semblent incoherentes, l'utilisateur peut annuler l'import.
 
 ---
 
+## Jours Facturables en Main (PIPE)
+
+### Definition
+
+Le **temps facturable en main** (ou "PIPE") represente le volume de travail facturable identifie pour les semaines a venir. C'est le **matelas d'activite** qui permet d'anticiper la charge et d'eviter les trous de production.
+
+| Champ | Valeur |
+|-------|--------|
+| **Label** | Jours Facturables en Main |
+| **Description** | Somme des jours de production facturable prevus (S0 a S+2) |
+| **Source Excel** | Colonne "Temps facturable en main S0 a S+2" |
+| **Champ DB** | `days_facturable_main` |
+| **Type** | FLOAT |
+| **Unite** | Jours |
+
+### KPIs derives
+
+| KPI | Calcul | Usage |
+|-----|--------|-------|
+| **Total PIPE** | `SUM(days_facturable_main)` tous projets actifs | Volume global de travail en main |
+| **PIPE par CDP** | `SUM(days_facturable_main)` par chef de projet | Repartition de la charge par responsable |
+| **PIPE par BU** | `SUM(days_facturable_main)` par Business Unit | Repartition par metier |
+| **PIPE par Client** | `SUM(days_facturable_main)` par client | Top clients en volume |
+| **Moyenne par projet** | `AVG(days_facturable_main)` | Taille moyenne des projets en jours |
+
+### Performance CDP (base sur le PIPE)
+
+| Indicateur | Formule | Interpretation |
+|------------|---------|----------------|
+| **Jours moy. par projet** | `PIPE CDP / Nb projets actifs CDP` | Volume moyen par projet gere |
+| **% PIPE total** | `PIPE CDP / PIPE total * 100` | Part de charge du CDP |
+| **Evolution PIPE** | `PIPE semaine N - PIPE semaine N-1` | Tendance (croissance ou decroissance) |
+| **Ecart vs moyenne** | `PIPE CDP - (PIPE total / Nb CDP)` | Performance relative |
+
+### Regles metier
+
+1. **PIPE = 0** sur un projet actif = **ALERTE** (pas de visibilite)
+2. **PIPE eleve + peu de projets** = projets "lourds" (risque concentration)
+3. **PIPE faible + beaucoup de projets** = projets "legers" (risque dispersion)
+4. **Evolution negative** sur plusieurs semaines = **WARNING** (pipe qui se vide)
+
+### Graphiques associes
+
+1. **Dashboard** : 4 graphiques PIPE (evolution, par CDP, par BU, par type Build/Run)
+2. **Onglet CDP** : Classement des CDP par jours facturables en main
+3. **Evolution** : Courbe temporelle du PIPE par CDP et global
+
+---
+
 ## Onglet CDP (Chefs de Projet)
 
 ### Objectif
@@ -302,6 +351,19 @@ Taux Sante = ((Projets actifs - Projets avec warning) / Projets actifs) * 100
 - Vert : >= 80%
 - Jaune : >= 50% et < 80%
 - Rouge : < 50%
+
+### Graphique Principal : Jours Facturables en Main par CDP
+
+**Position** : En haut de l'onglet, juste apres les KPIs globaux.
+
+**Type** : Barres horizontales, triees du plus grand au plus petit.
+
+**Donnees** : `SUM(days_facturable_main)` par chef de projet.
+
+**Utilite** :
+- Voir d'un coup d'oeil qui a le plus de charge facturable
+- Identifier les CDP avec peu de PIPE (risque de sous-charge)
+- Comparer la repartition du volume entre CDP
 
 ### Graphiques de Classement (Semaine selectionnee)
 

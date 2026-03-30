@@ -1,8 +1,8 @@
 """
 Onglet Engagements de l'application Huco Report.
 
-Affiche les engagements CDP S+1 depuis le fichier Excel Suivi_Hebdo_Projet_GDP_HUCO :
-- Tableau des projets actifs tries par jours S+1
+Affiche les engagements CDP Fact. en main depuis le fichier Excel Suivi_Hebdo_Projet_GDP_HUCO :
+- Tableau des projets actifs tries par jours Fact. en main
 - Totaux par Chef de Projet
 - Totaux par Phase (RUN, BUILD, AVANT VENTES)
 """
@@ -58,7 +58,7 @@ def find_column(df, pattern: str, alternatives: list = None) -> str:
 
 
 class EngagementsTab(QWidget):
-    """Onglet Engagements CDP S+1."""
+    """Onglet Engagements CDP Fact. en main."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -114,7 +114,7 @@ class EngagementsTab(QWidget):
         widget = QWidget()
         layout = QHBoxLayout()
 
-        title = QLabel("ENGAGEMENTS CDP - S+1")
+        title = QLabel("ENGAGEMENTS CDP - Fact. en main")
         title_font = QFont()
         title_font.setPointSize(16)
         title_font.setBold(True)
@@ -151,7 +151,7 @@ class EngagementsTab(QWidget):
         refresh_btn = QPushButton("Rafraichir")
         refresh_btn.setStyleSheet("""
             QPushButton {
-                background-color: #4CAF50;
+                background-color: #0A1563;
                 color: white;
                 border: none;
                 border-radius: 5px;
@@ -170,7 +170,7 @@ class EngagementsTab(QWidget):
 
     def _create_totals_section(self) -> QGroupBox:
         """Cree la section des totaux."""
-        group = QGroupBox("TOTAL ENGAGEMENT S+1")
+        group = QGroupBox("TOTAL ENGAGEMENT Fact. en main")
         group.setStyleSheet("""
             QGroupBox {
                 background-color: #1E3A5F;
@@ -244,7 +244,7 @@ class EngagementsTab(QWidget):
         group = QGroupBox("PAR CHEF DE PROJET")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
+                background-color: #f8faff;
                 border: 2px solid #1E3A5F;
                 border-radius: 5px;
                 margin-top: 10px;
@@ -257,7 +257,7 @@ class EngagementsTab(QWidget):
 
         self.cdp_table = QTableWidget()
         self.cdp_table.setColumnCount(3)
-        self.cdp_table.setHorizontalHeaderLabels(["Chef de Projet", "Jours S+1", "Nb Projets"])
+        self.cdp_table.setHorizontalHeaderLabels(["Chef de Projet", "Jours Fact. en main", "Nb Projets"])
         self.cdp_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.cdp_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
         self.cdp_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
@@ -275,7 +275,7 @@ class EngagementsTab(QWidget):
         group = QGroupBox("LISTE DES PROJETS ACTIFS")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
+                background-color: #f8faff;
                 border: 2px solid #6B2D7B;
                 border-radius: 5px;
                 margin-top: 10px;
@@ -288,7 +288,7 @@ class EngagementsTab(QWidget):
 
         self.projects_table = QTableWidget()
         self.projects_table.setColumnCount(4)
-        self.projects_table.setHorizontalHeaderLabels(["Projet", "Jours S+1", "Phase", "Chef de Projet"])
+        self.projects_table.setHorizontalHeaderLabels(["Projet", "Jours Fact. en main", "Phase", "Chef de Projet"])
         self.projects_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.projects_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
         self.projects_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
@@ -378,10 +378,10 @@ class EngagementsTab(QWidget):
             # Trouver les noms de colonnes (insensible aux accents)
             col_statut = find_column(df, 'Statut Projet')
             col_projet = find_column(df, 'Projet Client')
-            col_facturable = find_column(df, 'Facturable prevu S+1', [
+            col_facturable = find_column(df, 'Facturable prevu Fact. en main', [
                 'Temps facturable en main',
                 'Facturable en main',
-                'facturable S+1'
+                'facturable Fact. en main'
             ])
             col_phase = find_column(df, 'Phase du projet')
             col_cdp = find_column(df, 'Chef de projet')
@@ -394,8 +394,8 @@ class EngagementsTab(QWidget):
 
             # Preparer les donnees avec noms de colonnes standardises
             self.df_projets = df_actif[[col_projet, col_facturable, col_phase, col_cdp]].copy()
-            self.df_projets.columns = ['Projet Client', 'Jours S+1', 'Phase du projet', 'Chef de projet']
-            self.df_projets = self.df_projets.sort_values('Jours S+1', ascending=False)
+            self.df_projets.columns = ['Projet Client', 'Jours Fact. en main', 'Phase du projet', 'Chef de projet']
+            self.df_projets = self.df_projets.sort_values('Jours Fact. en main', ascending=False)
             self.df_projets['Projet Client'] = self.df_projets['Projet Client'].str.replace('\n', ' ')
             self.df_projets['Phase du projet'] = self.df_projets['Phase du projet'].fillna('N/A')
 
@@ -408,7 +408,7 @@ class EngagementsTab(QWidget):
             # Mettre a jour le label
             file_name = Path(file_path).name
             self.file_info_label.setText(f"{file_name} - Feuille {latest_sheet}")
-            self.file_info_label.setStyleSheet("color: #4CAF50; font-weight: bold;")
+            self.file_info_label.setStyleSheet("color: #0A1563; font-weight: bold;")
 
         except Exception as e:
             logger.error(f"Erreur load_excel: {e}")
@@ -422,29 +422,29 @@ class EngagementsTab(QWidget):
         df = self.df_projets
 
         # Total
-        total = df['Jours S+1'].sum()
+        total = df['Jours Fact. en main'].sum()
         self.total_jours_label.setText(f"{total:.0f}")
 
         # Par phase
-        phase_totals = df.groupby('Phase du projet')['Jours S+1'].sum()
+        phase_totals = df.groupby('Phase du projet')['Jours Fact. en main'].sum()
         for phase, label in self.phase_labels.items():
             val = phase_totals.get(phase, 0)
             label.setText(f"{val:.1f}")
 
         # Tableau CDP
         cdp_recap = df.groupby('Chef de projet').agg({
-            'Jours S+1': 'sum',
+            'Jours Fact. en main': 'sum',
             'Projet Client': 'count'
         }).rename(columns={'Projet Client': 'Nb Projets'})
-        cdp_recap = cdp_recap.sort_values('Jours S+1', ascending=False)
+        cdp_recap = cdp_recap.sort_values('Jours Fact. en main', ascending=False)
 
         self.cdp_table.setRowCount(len(cdp_recap))
         for i, (cdp, row) in enumerate(cdp_recap.iterrows()):
             self.cdp_table.setItem(i, 0, QTableWidgetItem(str(cdp)))
 
-            jours_item = QTableWidgetItem(f"{row['Jours S+1']:.1f}")
+            jours_item = QTableWidgetItem(f"{row['Jours Fact. en main']:.1f}")
             jours_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            if row['Jours S+1'] > 0:
+            if row['Jours Fact. en main'] > 0:
                 jours_item.setForeground(QColor("#E86C00"))
                 jours_item.setFont(QFont("", -1, QFont.Weight.Bold))
             self.cdp_table.setItem(i, 1, jours_item)
@@ -458,9 +458,9 @@ class EngagementsTab(QWidget):
         for i, (_, row) in enumerate(df.iterrows()):
             self.projects_table.setItem(i, 0, QTableWidgetItem(str(row['Projet Client'])[:50]))
 
-            jours_item = QTableWidgetItem(f"{row['Jours S+1']:.1f}" if row['Jours S+1'] > 0 else "-")
+            jours_item = QTableWidgetItem(f"{row['Jours Fact. en main']:.1f}" if row['Jours Fact. en main'] > 0 else "-")
             jours_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            if row['Jours S+1'] > 0:
+            if row['Jours Fact. en main'] > 0:
                 jours_item.setForeground(QColor("#E86C00"))
                 jours_item.setFont(QFont("", -1, QFont.Weight.Bold))
             self.projects_table.setItem(i, 1, jours_item)

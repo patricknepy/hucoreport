@@ -247,6 +247,14 @@ pytest tests/ -v
 
 ## 📝 Changelog
 
+### Version 0.8beta (Mars 2026)
+- 🎨 **Nouvelle charte graphique HuCo** : Couleurs corporate (bleu #0166FE, orange #FE4502)
+- 📊 **Visualisation PIPE** : Jours facturables en main par projet et par CDP
+- 📈 **Graphique correlation** : Nb Projets vs PIPE (double axe) pour detecter les anomalies
+- 🔴 **Alerte projets a 0j** : Projets sans visibilite affiches en rouge avec label "0j !"
+- 📊 **Ordre chronologique** : Graphiques d'evolution de gauche (ancien) a droite (recent)
+- 📝 **Documentation metier enrichie** : Section PIPE et performance CDP
+
 ### Version 0.7.0 (Janvier 2026)
 - ✨ **Onglet Exploitation** : Tableau éditable avec modification directe en base
 - 📊 **Onglet KPIs** : Indicateurs santé portefeuille + performance commerciale

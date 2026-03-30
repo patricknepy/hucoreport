@@ -58,7 +58,7 @@ class AnalysisTab(QWidget):
         refresh_btn.clicked.connect(self.refresh_charts)
         refresh_btn.setStyleSheet("""
             QPushButton {
-                background-color: #2196F3;
+                background-color: #0166FE;
                 color: white;
                 border: none;
                 border-radius: 3px;
@@ -214,7 +214,7 @@ class AnalysisTab(QWidget):
             x = np.arange(len(weeks))
 
             # Barres pour projets actifs
-            bars = ax.bar(x, active_projects, color='#4CAF50', alpha=0.8, label='Projets Actifs')
+            bars = ax.bar(x, active_projects, color='#0A1563', alpha=0.8, label='Projets Actifs')
 
             # Ligne de tendance
             ax.plot(x, active_projects, color='#2E7D32', linewidth=2, marker='o', markersize=6)
@@ -480,10 +480,10 @@ class AnalysisTab(QWidget):
             # Axe 2 : Nombre de projets actifs (vert)
             ax2 = ax1.twinx()
             line2, = ax2.plot(x, active_projects, marker='s', linewidth=2, markersize=6,
-                   color='#4CAF50', linestyle='--', label='Projets actifs')
-            ax2.set_ylabel('Nb projets actifs', fontsize=10, color='#4CAF50')
+                   color='#0A1563', linestyle='--', label='Projets actifs')
+            ax2.set_ylabel('Nb projets actifs', fontsize=10, color='#0A1563')
             ax2.set_ylim(0, 100)
-            ax2.tick_params(axis='y', labelcolor='#4CAF50')
+            ax2.tick_params(axis='y', labelcolor='#0A1563')
 
             ax1.set_xlabel('Semaine', fontsize=10)
             ax1.set_title('% Dossiers en Warning vs Projets Actifs', fontsize=11, fontweight='bold')

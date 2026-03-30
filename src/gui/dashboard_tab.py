@@ -122,12 +122,12 @@ class DashboardTab(QWidget):
         return widget
 
     def _create_pipe_section(self) -> QGroupBox:
-        """Section PIPE : Vue complète du temps facturable en main (style moderne gris)."""
+        """Section PIPE : Vue complète du temps facturable en main (charte HuCo)."""
         group = QGroupBox("PIPE - GÉNÉRATION DE BUSINESS")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #fafafa;
-                border: 2px solid #424242;
+                background-color: #f8faff;
+                border: 2px solid #0166FE;
                 border-radius: 8px;
                 margin-top: 12px;
                 padding-top: 12px;
@@ -135,7 +135,7 @@ class DashboardTab(QWidget):
                 font-size: 11pt;
             }
             QGroupBox::title {
-                color: #212121;
+                color: #0A1563;
             }
         """)
 
@@ -148,11 +148,11 @@ class DashboardTab(QWidget):
         row1_layout.setSpacing(15)
 
         # Bloc KPI Total
-        self.pipe_total_tile = self._create_modern_kpi_tile("TOTAL PIPE", "0 j", "#424242")
+        self.pipe_total_tile = self._create_modern_kpi_tile("TOTAL PIPE", "0 j", "#0A1563")
         row1_layout.addWidget(self.pipe_total_tile)
 
         # Graphique évolution du pipe (plus grand)
-        self.chart_pipe_evolution = self._create_modern_line_chart("Évolution du Pipe (semaines)", "#616161")
+        self.chart_pipe_evolution = self._create_modern_line_chart("Évolution du Pipe (semaines)", "#0166FE")
         row1_layout.addWidget(self.chart_pipe_evolution, stretch=3)
 
         main_layout.addLayout(row1_layout)
@@ -162,19 +162,19 @@ class DashboardTab(QWidget):
         row2_layout.setSpacing(12)
 
         # Par Chef de Projet
-        self.chart_pipe_by_cdp = self._create_modern_bar_chart("Par Chef de Projet", "#757575")
+        self.chart_pipe_by_cdp = self._create_modern_bar_chart("Par Chef de Projet", "#0166FE")
         row2_layout.addWidget(self.chart_pipe_by_cdp, stretch=1)
 
         # Par Techno (BU)
-        self.chart_pipe_by_bu = self._create_modern_bar_chart("Par Techno (BU)", "#9E9E9E")
+        self.chart_pipe_by_bu = self._create_modern_bar_chart("Par Techno (BU)", "#0A1563")
         row2_layout.addWidget(self.chart_pipe_by_bu, stretch=1)
 
         # Par Type (Build/Run) - sera un pie chart
-        self.chart_pipe_by_type = self._create_modern_pie_chart("Build vs Run", "#BDBDBD")
+        self.chart_pipe_by_type = self._create_modern_pie_chart("Build vs Run", "#FE4502")
         row2_layout.addWidget(self.chart_pipe_by_type, stretch=1)
 
         # Par Client (Top 10)
-        self.chart_pipe_by_client = self._create_modern_bar_chart("Top Clients", "#E0E0E0")
+        self.chart_pipe_by_client = self._create_modern_bar_chart("Top Clients", "#0166FE")
         row2_layout.addWidget(self.chart_pipe_by_client, stretch=1)
 
         main_layout.addLayout(row2_layout)
@@ -183,7 +183,7 @@ class DashboardTab(QWidget):
         return group
 
     def _create_modern_kpi_tile(self, title: str, value: str, color: str) -> QFrame:
-        """Crée une tuile KPI moderne style gris."""
+        """Crée une tuile KPI moderne style HuCo."""
         tile = QFrame()
         tile.setStyleSheet(f"""
             QFrame {{
@@ -216,11 +216,11 @@ class DashboardTab(QWidget):
         return tile
 
     def _create_modern_line_chart(self, title: str, color: str) -> QWidget:
-        """Crée un graphique en ligne style moderne gris."""
+        """Crée un graphique en ligne style HuCo."""
         widget = QWidget()
         widget.setStyleSheet("""
             QWidget {
-                background-color: #f5f5f5;
+                background-color: #f8faff;
                 border-radius: 8px;
             }
         """)
@@ -229,12 +229,12 @@ class DashboardTab(QWidget):
         layout.setContentsMargins(10, 10, 10, 10)
 
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-weight: bold; font-size: 10pt; color: #424242;")
+        title_label.setStyleSheet("font-weight: bold; font-size: 10pt; color: #0A1563;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
         fig = Figure(figsize=(6, 2.5), dpi=100)
-        fig.patch.set_facecolor('#f5f5f5')
+        fig.patch.set_facecolor('#f8faff')
         canvas = FigureCanvas(fig)
         canvas.setMinimumHeight(150)
 
@@ -245,11 +245,11 @@ class DashboardTab(QWidget):
         return widget
 
     def _create_modern_bar_chart(self, title: str, color: str) -> QWidget:
-        """Crée un graphique à barres style moderne gris."""
+        """Crée un graphique à barres style HuCo."""
         widget = QWidget()
         widget.setStyleSheet("""
             QWidget {
-                background-color: #f5f5f5;
+                background-color: #f8faff;
                 border-radius: 8px;
             }
         """)
@@ -258,12 +258,12 @@ class DashboardTab(QWidget):
         layout.setContentsMargins(8, 8, 8, 8)
 
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-weight: bold; font-size: 9pt; color: #424242;")
+        title_label.setStyleSheet("font-weight: bold; font-size: 9pt; color: #0A1563;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
         fig = Figure(figsize=(3, 3), dpi=100)
-        fig.patch.set_facecolor('#f5f5f5')
+        fig.patch.set_facecolor('#f8faff')
         canvas = FigureCanvas(fig)
         canvas.setMinimumHeight(180)
 
@@ -274,11 +274,11 @@ class DashboardTab(QWidget):
         return widget
 
     def _create_modern_pie_chart(self, title: str, color: str) -> QWidget:
-        """Crée un graphique camembert style moderne."""
+        """Crée un graphique camembert style HuCo."""
         widget = QWidget()
         widget.setStyleSheet("""
             QWidget {
-                background-color: #f5f5f5;
+                background-color: #f8faff;
                 border-radius: 8px;
             }
         """)
@@ -287,12 +287,12 @@ class DashboardTab(QWidget):
         layout.setContentsMargins(8, 8, 8, 8)
 
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-weight: bold; font-size: 9pt; color: #424242;")
+        title_label.setStyleSheet("font-weight: bold; font-size: 9pt; color: #0A1563;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
         fig = Figure(figsize=(3, 3), dpi=100)
-        fig.patch.set_facecolor('#f5f5f5')
+        fig.patch.set_facecolor('#f8faff')
         canvas = FigureCanvas(fig)
         canvas.setMinimumHeight(180)
 
@@ -321,19 +321,19 @@ class DashboardTab(QWidget):
         canvas.setMinimumWidth(300)
 
         canvas.figure = fig
-        canvas.chart_color = '#9C27B0'
+        canvas.chart_color = '#0166FE'
 
         layout.addWidget(canvas, stretch=1)
 
         return widget
 
-    def _create_kpi_tile(self, title: str, value: str, color: str = "#2196F3", icon: str = "") -> QFrame:
-        """Crée une tuile KPI stylisée (fond gris, sans bordure)."""
+    def _create_kpi_tile(self, title: str, value: str, color: str = "#0166FE", icon: str = "") -> QFrame:
+        """Crée une tuile KPI stylisée (fond bleu clair HuCo, sans bordure)."""
         tile = QFrame()
         tile.setFrameShape(QFrame.Shape.StyledPanel)
         tile.setStyleSheet(f"""
             QFrame {{
-                background-color: #f5f5f5;
+                background-color: #E8F0FC;
                 border: none;
                 border-radius: 5px;
             }}
@@ -348,7 +348,7 @@ class DashboardTab(QWidget):
 
         # Icône + Titre
         title_label = QLabel(f"{icon} {title}")
-        title_label.setStyleSheet(f"font-size: 12pt; color: #333; font-weight: bold;")
+        title_label.setStyleSheet(f"font-size: 12pt; color: #0A1563; font-weight: bold;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setWordWrap(True)
         title_label.setMinimumHeight(35)
@@ -366,7 +366,7 @@ class DashboardTab(QWidget):
 
         return tile
 
-    def _create_compact_tile(self, title: str, value: str, color: str = "#2196F3") -> QFrame:
+    def _create_compact_tile(self, title: str, value: str, color: str = "#0166FE") -> QFrame:
         """Crée une tuile compacte carrée (fond coloré, sans bordure)."""
         tile = QFrame()
         tile.setFrameShape(QFrame.Shape.StyledPanel)
@@ -412,12 +412,15 @@ class DashboardTab(QWidget):
         group = QGroupBox("VUE GLOBALE")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
-                border: 2px solid black;
+                background-color: #f8faff;
+                border: 2px solid #0166FE;
                 border-radius: 5px;
                 margin-top: 10px;
                 padding-top: 10px;
                 font-weight: bold;
+            }
+            QGroupBox::title {
+                color: #0A1563;
             }
         """)
         main_layout = QHBoxLayout()
@@ -429,16 +432,16 @@ class DashboardTab(QWidget):
         left_layout.setSpacing(8)
         left_layout.setContentsMargins(5, 5, 5, 5)
 
-        self.total_tile = self._create_kpi_tile("Total projets", "51", "#2196F3", "")
+        self.total_tile = self._create_kpi_tile("Total projets", "51", "#0166FE", "")
         left_layout.addWidget(self.total_tile, 0, 0)
 
-        self.active_tile = self._create_kpi_tile("Projets actifs", "47", "#4CAF50", "")
+        self.active_tile = self._create_kpi_tile("Projets actifs", "47", "#0A1563", "")
         left_layout.addWidget(self.active_tile, 0, 1)
 
-        self.pipe_tile = self._create_kpi_tile("Jours dans le pipe", "0 j", "#9C27B0", "")
+        self.pipe_tile = self._create_kpi_tile("Jours dans le pipe", "0 j", "#FE4502", "")
         left_layout.addWidget(self.pipe_tile, 1, 0)
 
-        self.expandable_tile = self._create_kpi_tile("Augmentables", "13", "#9C27B0", "")
+        self.expandable_tile = self._create_kpi_tile("Augmentables", "13", "#5A9CFF", "")
         left_layout.addWidget(self.expandable_tile, 1, 1)
 
         left_widget = QWidget()
@@ -449,7 +452,7 @@ class DashboardTab(QWidget):
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.VLine)
         separator.setLineWidth(3)
-        separator.setStyleSheet("background-color: #FFA500; max-width: 3px;")
+        separator.setStyleSheet("background-color: #FE4502; max-width: 3px;")
         main_layout.addWidget(separator)
 
         # Graphiques à droite (2 colonnes, extensibles)
@@ -475,12 +478,15 @@ class DashboardTab(QWidget):
         group = QGroupBox("ACTUALITE CLIENT")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
-                border: 2px solid black;
+                background-color: #f8faff;
+                border: 2px solid #0166FE;
                 border-radius: 5px;
                 margin-top: 10px;
                 padding-top: 10px;
                 font-weight: bold;
+            }
+            QGroupBox::title {
+                color: #0A1563;
             }
         """)
         main_layout = QHBoxLayout()
@@ -514,7 +520,7 @@ class DashboardTab(QWidget):
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.VLine)
         separator.setLineWidth(3)
-        separator.setStyleSheet("background-color: #FFA500; max-width: 3px;")
+        separator.setStyleSheet("background-color: #FE4502; max-width: 3px;")
         main_layout.addWidget(separator)
 
         # Graphiques et calendrier à droite (extensibles)
@@ -534,7 +540,7 @@ class DashboardTab(QWidget):
         group.setLayout(main_layout)
         return group
 
-    def _create_bar_chart(self, title: str, color: str = '#2196F3') -> QWidget:
+    def _create_bar_chart(self, title: str, color: str = '#0166FE') -> QWidget:
         """Crée un widget contenant un graphique à bâtons matplotlib (taille adaptative)."""
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -680,12 +686,15 @@ class DashboardTab(QWidget):
         group = QGroupBox("ALERTES")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
-                border: 2px solid black;
+                background-color: #f8faff;
+                border: 2px solid #0166FE;
                 border-radius: 5px;
                 margin-top: 10px;
                 padding-top: 10px;
                 font-weight: bold;
+            }
+            QGroupBox::title {
+                color: #0A1563;
             }
         """)
         # Grille 2x2 pour éviter le dépassement horizontal
@@ -813,12 +822,15 @@ class DashboardTab(QWidget):
         group = QGroupBox("ACTIONS & DEADLINES CETTE SEMAINE")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
-                border: 2px solid black;
+                background-color: #f8faff;
+                border: 2px solid #0166FE;
                 border-radius: 5px;
                 margin-top: 10px;
                 padding-top: 10px;
                 font-weight: bold;
+            }
+            QGroupBox::title {
+                color: #0A1563;
             }
         """)
         main_layout = QVBoxLayout()
@@ -833,10 +845,10 @@ class DashboardTab(QWidget):
         self.pct_warning_tile = self._create_compact_tile("% Dossiers\nen warning", "0%", "#E91E63")
         tiles_layout.addWidget(self.pct_warning_tile, alignment=Qt.AlignmentFlag.AlignLeft)
 
-        self.dlic_week_tile = self._create_compact_tile("DLIC à traiter\n(semaine en cours)", "0", "#2196F3")
+        self.dlic_week_tile = self._create_compact_tile("DLIC à traiter\n(semaine en cours)", "0", "#0166FE")
         tiles_layout.addWidget(self.dlic_week_tile, alignment=Qt.AlignmentFlag.AlignLeft)
 
-        self.dli_week_tile = self._create_compact_tile("DLI à traiter\n(semaine en cours)", "0", "#03A9F4")
+        self.dli_week_tile = self._create_compact_tile("DLI à traiter\n(semaine en cours)", "0", "#5A9CFF")
         tiles_layout.addWidget(self.dli_week_tile, alignment=Qt.AlignmentFlag.AlignLeft)
 
         self.dlic_overdue_tile = self._create_compact_tile("DLIC dépassées", "0", "#F44336")
@@ -858,12 +870,15 @@ class DashboardTab(QWidget):
         group = QGroupBox("RENDEZ-VOUS CLIENT CETTE SEMAINE")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
-                border: 2px solid black;
+                background-color: #f8faff;
+                border: 2px solid #0166FE;
                 border-radius: 5px;
                 margin-top: 10px;
                 padding-top: 10px;
                 font-weight: bold;
+            }
+            QGroupBox::title {
+                color: #0A1563;
             }
         """)
         layout = QVBoxLayout()
@@ -904,7 +919,7 @@ class DashboardTab(QWidget):
 
         # En-tête : Jour
         day_label = QLabel(day_name)
-        day_label.setStyleSheet("font-weight: bold; font-size: 10pt; color: #2196F3;")
+        day_label.setStyleSheet("font-weight: bold; font-size: 10pt; color: #0166FE;")
         day_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(day_label)
 
@@ -1173,14 +1188,14 @@ class DashboardTab(QWidget):
             for rdv in day_rdv:
                 rdv_label = QLabel(rdv['client_name'])
                 rdv_label.setStyleSheet("""
-                    background-color: #E3F2FD;
-                    border-left: 3px solid #2196F3;
+                    background-color: #E8F0FC;
+                    border-left: 3px solid #0166FE;
                     padding: 8px;
                     margin: 3px 0;
                     font-size: 9pt;
                     font-weight: normal;
                     border-radius: 3px;
-                    color: #1976D2;
+                    color: #0A1563;
                 """)
                 rdv_label.setMinimumHeight(30)
                 rdv_label.setWordWrap(True)
@@ -1367,25 +1382,25 @@ class DashboardTab(QWidget):
         ax = fig.add_subplot(111)
 
         if weeks and values:
-            # Style gris moderne
-            ax.plot(range(len(weeks)), values, color='#424242', marker='o', markersize=6, linewidth=2.5)
-            ax.fill_between(range(len(weeks)), values, alpha=0.2, color='#757575')
+            # Style HuCo bleu
+            ax.plot(range(len(weeks)), values, color='#0166FE', marker='o', markersize=6, linewidth=2.5)
+            ax.fill_between(range(len(weeks)), values, alpha=0.15, color='#0166FE')
             ax.set_xticks(range(len(weeks)))
             ax.set_xticklabels(weeks, rotation=45, ha='right', fontsize=8)
-            ax.set_ylabel('Jours', fontsize=9, color='#424242')
-            ax.grid(axis='y', alpha=0.3, color='#bdbdbd')
-            ax.tick_params(colors='#616161')
+            ax.set_ylabel('Jours', fontsize=9, color='#0A1563')
+            ax.grid(axis='y', alpha=0.3, color='#0166FE')
+            ax.tick_params(colors='#0A1563')
 
             # Afficher les valeurs sur les points
             for i, v in enumerate(values):
-                ax.text(i, v + max(values)*0.02, f'{v}', ha='center', va='bottom', fontsize=8, color='#424242', fontweight='bold')
+                ax.text(i, v + max(values)*0.02, f'{v}', ha='center', va='bottom', fontsize=8, color='#0A1563', fontweight='bold')
         else:
-            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#9e9e9e')
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#0166FE')
 
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        ax.spines['left'].set_color('#bdbdbd')
-        ax.spines['bottom'].set_color('#bdbdbd')
+        ax.spines['left'].set_color('#0166FE')
+        ax.spines['bottom'].set_color('#0166FE')
 
         fig.tight_layout()
         canvas.draw()
@@ -1417,19 +1432,19 @@ class DashboardTab(QWidget):
             labels = [r['project_manager'][:15] for r in data]
             values = [r['total_facturable'] for r in data]
 
-            # Barres horizontales grises
-            bars = ax.barh(range(len(labels)), values, color='#616161', alpha=0.8)
+            # Barres horizontales HuCo bleu
+            bars = ax.barh(range(len(labels)), values, color='#0166FE', alpha=0.8)
             ax.set_yticks(range(len(labels)))
             ax.set_yticklabels(labels, fontsize=7)
             ax.invert_yaxis()
-            ax.grid(axis='x', alpha=0.3, color='#bdbdbd')
+            ax.grid(axis='x', alpha=0.3, color='#0166FE')
 
             for bar in bars:
                 width = bar.get_width()
                 ax.text(width + 0.5, bar.get_y() + bar.get_height()/2., f'{width:.0f}j',
-                       ha='left', va='center', fontsize=7, color='#424242')
+                       ha='left', va='center', fontsize=7, color='#0A1563')
         else:
-            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#9e9e9e')
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#0166FE')
 
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
@@ -1461,18 +1476,18 @@ class DashboardTab(QWidget):
             labels = [d['bu'][:12] for d in data[:8]]
             values = [d['total_facturable'] for d in data[:8]]
 
-            bars = ax.barh(range(len(labels)), values, color='#9e9e9e', alpha=0.8)
+            bars = ax.barh(range(len(labels)), values, color='#0A1563', alpha=0.8)
             ax.set_yticks(range(len(labels)))
             ax.set_yticklabels(labels, fontsize=7)
             ax.invert_yaxis()
-            ax.grid(axis='x', alpha=0.3, color='#bdbdbd')
+            ax.grid(axis='x', alpha=0.3, color='#0166FE')
 
             for bar in bars:
                 width = bar.get_width()
                 ax.text(width + 0.5, bar.get_y() + bar.get_height()/2., f'{width:.0f}j',
-                       ha='left', va='center', fontsize=7, color='#424242')
+                       ha='left', va='center', fontsize=7, color='#0A1563')
         else:
-            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#9e9e9e')
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#0166FE')
 
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
@@ -1504,8 +1519,8 @@ class DashboardTab(QWidget):
             labels = [d['contract_type'] or 'Non défini' for d in data]
             values = [d['total_facturable'] for d in data]
 
-            # Couleurs grises dégradées
-            colors = ['#424242', '#757575', '#9e9e9e', '#bdbdbd', '#e0e0e0']
+            # Couleurs HuCo : bleu foncé, bleu, orange, bleu clair
+            colors = ['#0A1563', '#0166FE', '#FE4502', '#5A9CFF', '#E8F0FC']
 
             wedges, texts, autotexts = ax.pie(values, labels=labels, autopct='%1.0f%%',
                                                colors=colors[:len(values)], textprops={'fontsize': 7})
@@ -1513,7 +1528,7 @@ class DashboardTab(QWidget):
                 autotext.set_color('white')
                 autotext.set_fontweight('bold')
         else:
-            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#9e9e9e')
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#0166FE')
 
         fig.tight_layout()
         canvas.draw()
@@ -1545,18 +1560,18 @@ class DashboardTab(QWidget):
             labels = [d['client_name'][:12] for d in top_data]
             values = [d['total_facturable'] for d in top_data]
 
-            bars = ax.barh(range(len(labels)), values, color='#bdbdbd', alpha=0.9)
+            bars = ax.barh(range(len(labels)), values, color='#5A9CFF', alpha=0.9)
             ax.set_yticks(range(len(labels)))
             ax.set_yticklabels(labels, fontsize=7)
             ax.invert_yaxis()
-            ax.grid(axis='x', alpha=0.3, color='#e0e0e0')
+            ax.grid(axis='x', alpha=0.3, color='#0166FE')
 
             for bar in bars:
                 width = bar.get_width()
                 ax.text(width + 0.5, bar.get_y() + bar.get_height()/2., f'{width:.0f}j',
-                       ha='left', va='center', fontsize=7, color='#424242')
+                       ha='left', va='center', fontsize=7, color='#0A1563')
         else:
-            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#9e9e9e')
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes, color='#0166FE')
 
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)

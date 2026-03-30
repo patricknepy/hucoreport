@@ -1354,3 +1354,115 @@ class DashboardCalculator:
                  'total_facturable': round(row['total_facturable'], 1),
                  'project_count': row['project_count']} for row in rows]
 
+    def get_facturable_by_project(self, week: int, limit: int = 15, cdp_name: str = None) -> List[Dict[str, Any]]:
+        """
+        Top projets par temps facturable en main.
+
+        Args:
+            week: Numéro de semaine
+            limit: Nombre max de projets
+            cdp_name: Si spécifié, filtre par chef de projet
+
+        Returns:
+            Liste triée par temps facturable décroissant (top projets)
+        """
+        if cdp_name:
+            query = """
+                SELECT
+                    COALESCE(client_name, 'Non défini') as client_name,
+                    COALESCE(bu, 'N/A') as bu,
+                    COALESCE(project_manager, 'Non défini') as project_manager,
+                    COALESCE(days_facturable_main, 0) as days_facturable
+                FROM projects
+                WHERE week_number = ?
+                AND status = 'EN COURS'
+                AND COALESCE(project_manager, 'Non défini') = ?
+                ORDER BY days_facturable_main DESC
+                LIMIT ?
+            """
+            cursor = self.db.conn.cursor()
+            cursor.execute(query, (week, cdp_name, limit))
+        else:
+            query = """
+                SELECT
+                    COALESCE(client_name, 'Non défini') as client_name,
+                    COALESCE(bu, 'N/A') as bu,
+                    COALESCE(project_manager, 'Non défini') as project_manager,
+                    COALESCE(days_facturable_main, 0) as days_facturable
+                FROM projects
+                WHERE week_number = ?
+                AND status = 'EN COURS'
+                ORDER BY days_facturable_main DESC
+                LIMIT ?
+            """
+            cursor = self.db.conn.cursor()
+            cursor.execute(query, (week, limit))
+
+        rows = cursor.fetchall()
+
+        return [{'client_name': row['client_name'][:18],
+                 'bu': row['bu'],
+                 'project_manager': row['project_manager'],
+                 'days_facturable': round(row['days_facturable'], 1)} for row in rows]
+
+    def get_projects_vs_pipe_evolution(self, cdp_name: str = None) -> Dict[str, Any]:
+        """
+        Évolution corrélée : Nb projets actifs VS Total PIPE par semaine.
+
+        Args:
+            cdp_name: Si spécifié, filtre par chef de projet
+
+        Returns:
+            Dict avec weeks, active_projects, total_pipe (ordre chronologique S39 → S14)
+        """
+        weeks = self.db.get_available_weeks()
+        # Inverser pour ordre chronologique (anciennes semaines à gauche)
+        weeks = list(reversed(weeks))
+
+        result = {
+            'weeks': [],
+            'active_projects': [],
+            'total_pipe': [],
+            'avg_pipe_per_project': []
+        }
+
+        for week in weeks:
+            result['weeks'].append(f"S{week}")
+
+            if cdp_name:
+                # Filtré par CDP
+                nb_projects = self.db.execute_scalar(
+                    """SELECT COUNT(*) FROM projects
+                       WHERE week_number = ? AND status = 'EN COURS'
+                       AND COALESCE(project_manager, 'Non défini') = ?""",
+                    (week, cdp_name)
+                ) or 0
+
+                total_pipe = self.db.execute_scalar(
+                    """SELECT COALESCE(SUM(days_facturable_main), 0)
+                       FROM projects WHERE week_number = ? AND status = 'EN COURS'
+                       AND COALESCE(project_manager, 'Non défini') = ?""",
+                    (week, cdp_name)
+                ) or 0
+            else:
+                # Tous les projets
+                nb_projects = self.db.execute_scalar(
+                    "SELECT COUNT(*) FROM projects WHERE week_number = ? AND status = 'EN COURS'",
+                    (week,)
+                ) or 0
+
+                total_pipe = self.db.execute_scalar(
+                    """SELECT COALESCE(SUM(days_facturable_main), 0)
+                       FROM projects WHERE week_number = ? AND status = 'EN COURS'""",
+                    (week,)
+                ) or 0
+
+            result['active_projects'].append(nb_projects)
+            result['total_pipe'].append(round(total_pipe, 1))
+
+            # Moyenne par projet
+            avg = round(total_pipe / nb_projects, 1) if nb_projects > 0 else 0
+            result['avg_pipe_per_project'].append(avg)
+
+        return result
+

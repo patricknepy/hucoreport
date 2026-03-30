@@ -62,6 +62,10 @@ class CDPTab(QWidget):
         self.kpis_section = self._create_kpis_section()
         content_layout.addWidget(self.kpis_section)
 
+        # Section Jours Facturables en Main (graphique barres EN HAUT)
+        self.facturable_section = self._create_facturable_section()
+        content_layout.addWidget(self.facturable_section)
+
         # Section Tableau CDP
         self.table_section = self._create_table_section()
         content_layout.addWidget(self.table_section)
@@ -106,7 +110,7 @@ class CDPTab(QWidget):
         widget.setLayout(layout)
         return widget
 
-    def _create_compact_tile(self, title: str, value: str, color: str = "#2196F3") -> QFrame:
+    def _create_compact_tile(self, title: str, value: str, color: str = "#0166FE") -> QFrame:
         """Crée une tuile compacte."""
         tile = QFrame()
         tile.setFrameShape(QFrame.Shape.StyledPanel)
@@ -145,8 +149,8 @@ class CDPTab(QWidget):
         group = QGroupBox("VUE D'ENSEMBLE")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
-                border: 2px solid black;
+                background-color: #f8faff;
+                border: 2px solid #0166FE;
                 border-radius: 5px;
                 margin-top: 10px;
                 padding-top: 10px;
@@ -158,10 +162,10 @@ class CDPTab(QWidget):
         layout.setSpacing(8)
         layout.setContentsMargins(15, 15, 15, 15)
 
-        self.tile_total_cdp = self._create_compact_tile("Chefs de Projet", "0", "#2196F3")
+        self.tile_total_cdp = self._create_compact_tile("Chefs de Projet", "0", "#0166FE")
         layout.addWidget(self.tile_total_cdp)
 
-        self.tile_avg_projects = self._create_compact_tile("Moy. projets/CDP", "0", "#4CAF50")
+        self.tile_avg_projects = self._create_compact_tile("Moy. projets/CDP", "0", "#0A1563")
         layout.addWidget(self.tile_avg_projects)
 
         self.tile_avg_health = self._create_compact_tile("Taux santé moy.", "0%", "#FF9800")
@@ -170,7 +174,7 @@ class CDPTab(QWidget):
         self.tile_cdp_warning = self._create_compact_tile("CDP avec warn.", "0", "#F44336")
         layout.addWidget(self.tile_cdp_warning)
 
-        self.tile_total_days = self._create_compact_tile("Jours dispositif", "0", "#9C27B0")
+        self.tile_total_days = self._create_compact_tile("Jours dispositif", "0", "#FE4502")
         layout.addWidget(self.tile_total_days)
 
         self.tile_avg_nps_com = self._create_compact_tile("NPS Com. moy.", "N/A", "#00BCD4")
@@ -184,13 +188,114 @@ class CDPTab(QWidget):
         group.setLayout(layout)
         return group
 
+    def _create_facturable_section(self) -> QGroupBox:
+        """Crée la section Jours Facturables en Main avec 3 graphiques."""
+        group = QGroupBox("PIPE - JOURS FACTURABLES EN MAIN")
+        group.setStyleSheet("""
+            QGroupBox {
+                background-color: #f8faff;
+                border: 2px solid #FE4502;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+                font-weight: bold;
+            }
+            QGroupBox::title {
+                color: #0A1563;
+            }
+        """)
+
+        main_layout = QVBoxLayout()
+        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(15, 15, 15, 15)
+
+        # Ligne 1 : Top Projets (vertical) + Par CDP (horizontal)
+        row1_layout = QHBoxLayout()
+        row1_layout.setSpacing(15)
+
+        # Graph 1 : Top projets (barres verticales)
+        self.chart_top_projects = self._create_vertical_bar_chart("Top Projets (jours fact. en main)", "#FE4502")
+        row1_layout.addWidget(self.chart_top_projects, stretch=1)
+
+        # Graph 2 : Par CDP (barres horizontales)
+        self.chart_facturable_cdp = self._create_bar_chart("Par Chef de Projet", "#0166FE")
+        row1_layout.addWidget(self.chart_facturable_cdp, stretch=1)
+
+        main_layout.addLayout(row1_layout)
+
+        # Ligne 2 : Corrélation Nb projets VS PIPE
+        self.chart_correlation = self._create_dual_axis_chart(
+            "Évolution : Nb Projets Actifs vs PIPE (corrélation)",
+            "#0166FE", "#FE4502"
+        )
+        main_layout.addWidget(self.chart_correlation)
+
+        group.setLayout(main_layout)
+        return group
+
+    def _create_vertical_bar_chart(self, title: str, color: str) -> QWidget:
+        """Crée un graphique à barres verticales."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(3)
+        layout.setContentsMargins(5, 3, 5, 3)
+
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-weight: bold; font-size: 10pt; color: #0A1563;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
+
+        fig = Figure(figsize=(5, 3.5), dpi=100)
+        fig.patch.set_facecolor('#f8faff')
+        canvas = FigureCanvas(fig)
+        canvas.setMinimumHeight(220)
+        canvas.setMinimumWidth(350)
+
+        canvas.figure = fig
+        canvas.chart_color = color
+
+        layout.addWidget(canvas, stretch=1)
+
+        return widget
+
+    def _create_dual_axis_chart(self, title: str, color1: str, color2: str) -> QWidget:
+        """Crée un graphique double axe (corrélation)."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setSpacing(3)
+        layout.setContentsMargins(5, 3, 5, 3)
+
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-weight: bold; font-size: 10pt; color: #0A1563;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
+
+        # Légende explicative
+        legend_label = QLabel("↑ Si PIPE baisse alors que Nb projets monte = problème de remplissage")
+        legend_label.setStyleSheet("font-size: 8pt; color: #666; font-style: italic;")
+        legend_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(legend_label)
+
+        fig = Figure(figsize=(10, 3), dpi=100)
+        fig.patch.set_facecolor('#f8faff')
+        canvas = FigureCanvas(fig)
+        canvas.setMinimumHeight(200)
+
+        canvas.figure = fig
+        canvas.color1 = color1
+        canvas.color2 = color2
+
+        layout.addWidget(canvas, stretch=1)
+
+        return widget
+
     def _create_table_section(self) -> QGroupBox:
         """Crée la section du tableau récapitulatif."""
         group = QGroupBox("STATISTIQUES PAR CHEF DE PROJET")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
-                border: 2px solid black;
+                background-color: #f8faff;
+                border: 2px solid #0166FE;
                 border-radius: 5px;
                 margin-top: 10px;
                 padding-top: 10px;
@@ -234,7 +339,7 @@ class CDPTab(QWidget):
                 padding: 4px;
             }
             QHeaderView::section {
-                background-color: #4CAF50;
+                background-color: #0A1563;
                 color: white;
                 padding: 6px;
                 font-weight: bold;
@@ -262,8 +367,8 @@ class CDPTab(QWidget):
         group = QGroupBox("CLASSEMENTS (SEMAINE SÉLECTIONNÉE)")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
-                border: 2px solid black;
+                background-color: #f8faff;
+                border: 2px solid #0166FE;
                 border-radius: 5px;
                 margin-top: 10px;
                 padding-top: 10px;
@@ -276,12 +381,25 @@ class CDPTab(QWidget):
         layout.setContentsMargins(15, 15, 15, 15)
 
         # Graphique Charge
-        self.chart_charge = self._create_bar_chart("Projets actifs par CDP", "#2196F3")
+        self.chart_charge = self._create_bar_chart("Projets actifs par CDP", "#0166FE")
         layout.addWidget(self.chart_charge, stretch=1)
 
-        # Graphique Santé
-        self.chart_health = self._create_bar_chart("Taux de santé par CDP", "#4CAF50")
-        layout.addWidget(self.chart_health, stretch=1)
+        # Graphique Santé avec description
+        health_widget = QWidget()
+        health_layout = QVBoxLayout(health_widget)
+        health_layout.setSpacing(2)
+        health_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.chart_health = self._create_bar_chart("Taux de santé par CDP", "#0A1563")
+        health_layout.addWidget(self.chart_health)
+
+        # Description du taux de santé
+        health_desc = QLabel("Taux santé = % projets actifs SANS warning (Client ou Interne)")
+        health_desc.setStyleSheet("font-size: 8pt; color: #666; font-style: italic;")
+        health_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        health_layout.addWidget(health_desc)
+
+        layout.addWidget(health_widget, stretch=1)
 
         group.setLayout(layout)
         return group
@@ -291,8 +409,8 @@ class CDPTab(QWidget):
         group = QGroupBox("ÉVOLUTION SUR PLUSIEURS SEMAINES")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
-                border: 2px solid black;
+                background-color: #f8faff;
+                border: 2px solid #0166FE;
                 border-radius: 5px;
                 margin-top: 10px;
                 padding-top: 10px;
@@ -346,12 +464,46 @@ class CDPTab(QWidget):
         filter_layout.addStretch()
         main_layout.addLayout(filter_layout)
 
-        # Graphiques d'évolution (2 lignes de 2)
+        # === BLOC FACTURABLE EN HAUT ===
+        facturable_label = QLabel("FACTURABLE (PIPE)")
+        facturable_label.setStyleSheet("font-weight: bold; font-size: 11pt; color: #FE4502; margin-top: 10px;")
+        main_layout.addWidget(facturable_label)
+
+        fact_layout = QGridLayout()
+        fact_layout.setSpacing(15)
+
+        # Ligne 1 : Évolution PIPE + Corrélation
+        self.chart_evolution_facturable = self._create_line_chart("Évolution Temps Facturable en Main (jours)", "#FE4502")
+        fact_layout.addWidget(self.chart_evolution_facturable, 0, 0)
+
+        self.chart_evolution_correlation = self._create_dual_axis_chart(
+            "Corrélation Nb Projets vs PIPE",
+            "#0166FE", "#FE4502"
+        )
+        fact_layout.addWidget(self.chart_evolution_correlation, 0, 1)
+
+        # Ligne 2 : Jours par projet (barres verticales) pour le CDP sélectionné
+        self.chart_evolution_projects_bars = self._create_vertical_bar_chart("Jours fact. par Projet (CDP sélectionné)", "#FE4502")
+        fact_layout.addWidget(self.chart_evolution_projects_bars, 1, 0, 1, 2)  # Span 2 colonnes
+
+        main_layout.addLayout(fact_layout)
+
+        # Séparateur
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet("background-color: #0166FE; max-height: 2px; margin: 10px 0;")
+        main_layout.addWidget(sep)
+
+        # === BLOC AUTRES INDICATEURS EN BAS ===
+        autres_label = QLabel("INDICATEURS PROJET")
+        autres_label.setStyleSheet("font-weight: bold; font-size: 11pt; color: #0166FE;")
+        main_layout.addWidget(autres_label)
+
         charts_layout = QGridLayout()
         charts_layout.setSpacing(15)
 
         # Graphique évolution projets actifs
-        self.chart_evolution_projects = self._create_line_chart("Évolution des projets actifs", "#2196F3")
+        self.chart_evolution_projects = self._create_line_chart("Évolution des projets actifs", "#0166FE")
         charts_layout.addWidget(self.chart_evolution_projects, 0, 0)
 
         # Graphique évolution warnings
@@ -359,16 +511,12 @@ class CDPTab(QWidget):
         charts_layout.addWidget(self.chart_evolution_warnings, 0, 1)
 
         # Graphique évolution taux de santé
-        self.chart_evolution_health = self._create_line_chart("Évolution du taux de santé (%)", "#4CAF50")
+        self.chart_evolution_health = self._create_line_chart("Évolution du taux de santé (%)", "#0A1563")
         charts_layout.addWidget(self.chart_evolution_health, 1, 0)
 
         # Graphique évolution NPS
         self.chart_evolution_nps = self._create_line_chart("Évolution NPS", "#00BCD4")
         charts_layout.addWidget(self.chart_evolution_nps, 1, 1)
-
-        # Graphique évolution temps facturable en main (matelas d'activité)
-        self.chart_evolution_facturable = self._create_line_chart("Évolution Temps Facturable en Main (jours)", "#9C27B0")
-        charts_layout.addWidget(self.chart_evolution_facturable, 2, 0)
 
         main_layout.addLayout(charts_layout)
 
@@ -607,6 +755,7 @@ class CDPTab(QWidget):
             stats = calc.get_cdp_statistics(self.current_week)
 
             self._update_kpis(stats)
+            self._update_facturable_chart(calc)  # Nouveau graphique facturable
             self._update_table(stats)
             self._update_charts(stats)
             self.refresh_evolution_charts()
@@ -623,7 +772,7 @@ class CDPTab(QWidget):
             selected_cdps = self._get_selected_cdps()
 
             # Couleurs pour les différents CDP
-            colors = ['#2196F3', '#4CAF50', '#FF9800', '#E91E63', '#9C27B0', '#00BCD4', '#FF5722', '#795548']
+            colors = ['#0166FE', '#0A1563', '#FF9800', '#E91E63', '#FE4502', '#00BCD4', '#FF5722', '#795548']
 
             if not selected_cdps:
                 # Aucun CDP sélectionné = afficher le total global
@@ -634,7 +783,7 @@ class CDPTab(QWidget):
                 self._update_line_chart(
                     self.chart_evolution_projects,
                     weeks,
-                    [{'label': 'Tous', 'values': evolution['active_projects'], 'color': '#2196F3'}]
+                    [{'label': 'Tous', 'values': evolution['active_projects'], 'color': '#0166FE'}]
                 )
 
                 # Graphique warnings
@@ -651,7 +800,7 @@ class CDPTab(QWidget):
                 self._update_line_chart(
                     self.chart_evolution_health,
                     weeks,
-                    [{'label': 'Tous', 'values': evolution['health_rate'], 'color': '#4CAF50'}],
+                    [{'label': 'Tous', 'values': evolution['health_rate'], 'color': '#0A1563'}],
                     '%'
                 )
 
@@ -670,9 +819,20 @@ class CDPTab(QWidget):
                 self._update_line_chart(
                     self.chart_evolution_facturable,
                     facturable_evolution['weeks'],
-                    [{'label': 'Total', 'values': facturable_evolution['total_facturable'], 'color': '#9C27B0'}],
+                    [{'label': 'Total', 'values': facturable_evolution['total_facturable'], 'color': '#FE4502'}],
                     ' j'
                 )
+
+                # Graphique corrélation (global)
+                correlation_data = calc.get_projects_vs_pipe_evolution(None)
+                self._update_correlation_chart(self.chart_evolution_correlation, correlation_data)
+
+                # Graphique jours par projet (tous CDP)
+                top_projects = calc.get_facturable_by_project(self.current_week, limit=15, cdp_name=None)
+                if top_projects:
+                    labels = [f"{p['client_name']}\n({p['bu']})" for p in top_projects]
+                    values = [p['days_facturable'] for p in top_projects]
+                    self._update_vertical_bar_chart(self.chart_evolution_projects_bars, labels, values)
 
             else:
                 # CDP sélectionnés = afficher une courbe par CDP
@@ -742,8 +902,140 @@ class CDPTab(QWidget):
                     ' j'
                 )
 
+                # Graphique corrélation (premier CDP sélectionné)
+                if selected_cdps:
+                    correlation_data = calc.get_projects_vs_pipe_evolution(selected_cdps[0])
+                    self._update_correlation_chart(self.chart_evolution_correlation, correlation_data)
+
+                    # Graphique jours par projet (CDP sélectionné)
+                    top_projects = calc.get_facturable_by_project(self.current_week, limit=15, cdp_name=selected_cdps[0])
+                    if top_projects:
+                        labels = [f"{p['client_name']}\n({p['bu']})" for p in top_projects]
+                        values = [p['days_facturable'] for p in top_projects]
+                        self._update_vertical_bar_chart(self.chart_evolution_projects_bars, labels, values)
+                    else:
+                        self._update_vertical_bar_chart(self.chart_evolution_projects_bars, [], [])
+
         except Exception as e:
             logger.error(f"Erreur lors du rafraîchissement évolution: {e}")
+
+    def _update_facturable_chart(self, calc: DashboardCalculator):
+        """Met à jour les 3 graphiques PIPE."""
+        try:
+            # Graph 1 : Top projets (barres verticales) avec BU
+            top_projects = calc.get_facturable_by_project(self.current_week, limit=12)
+            if top_projects:
+                # Format: "Client (BU)"
+                labels = [f"{p['client_name']}\n({p['bu']})" for p in top_projects]
+                values = [p['days_facturable'] for p in top_projects]
+                self._update_vertical_bar_chart(self.chart_top_projects, labels, values)
+
+            # Graph 2 : Par CDP (barres horizontales)
+            ranking = calc.get_facturable_by_cdp_ranking(self.current_week)
+            if ranking:
+                labels = [r['project_manager'] for r in ranking]
+                values = [r['total_facturable'] for r in ranking]
+                self._update_bar_chart(self.chart_facturable_cdp, labels, values, "j")
+
+            # Graph 3 : Corrélation Nb projets vs PIPE
+            correlation_data = calc.get_projects_vs_pipe_evolution()
+            self._update_correlation_chart(self.chart_correlation, correlation_data)
+
+        except Exception as e:
+            logger.error(f"Erreur mise à jour graphiques PIPE: {e}")
+
+    def _update_vertical_bar_chart(self, widget: QWidget, labels: list, values: list):
+        """Met à jour un graphique à barres verticales. Projets à 0j en rouge."""
+        canvas = None
+        for child in widget.children():
+            if isinstance(child, FigureCanvas):
+                canvas = child
+                break
+
+        if not canvas:
+            return
+
+        fig = canvas.figure
+        fig.clear()
+        ax = fig.add_subplot(111)
+
+        if values:
+            x = range(len(labels))
+            # Couleur : rouge si 0 jours, sinon couleur normale
+            colors = ['#E53935' if v == 0 else canvas.chart_color for v in values]
+            bars = ax.bar(x, values, color=colors, alpha=0.8)
+            ax.set_xticks(x)
+            ax.set_xticklabels(labels, rotation=45, ha='right', fontsize=7)
+            ax.grid(axis='y', alpha=0.3)
+
+            # Afficher les valeurs sur les barres
+            for bar, val in zip(bars, values):
+                label_text = f'{val:.0f}j' if val > 0 else '0j !'
+                label_color = '#E53935' if val == 0 else '#0A1563'
+                y_pos = max(bar.get_height(), 1) + 0.5
+                ax.text(bar.get_x() + bar.get_width()/2., y_pos,
+                       label_text, ha='center', va='bottom', fontsize=7,
+                       color=label_color, fontweight='bold' if val == 0 else 'normal')
+        else:
+            ax.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax.transAxes)
+
+        ax.set_facecolor('#f8faff')
+        fig.tight_layout()
+        canvas.draw()
+
+    def _update_correlation_chart(self, widget: QWidget, data: dict):
+        """Met à jour le graphique de corrélation (double axe)."""
+        canvas = None
+        for child in widget.children():
+            if isinstance(child, FigureCanvas):
+                canvas = child
+                break
+
+        if not canvas:
+            return
+
+        fig = canvas.figure
+        fig.clear()
+        ax1 = fig.add_subplot(111)
+
+        weeks = data.get('weeks', [])
+        nb_projects = data.get('active_projects', [])
+        total_pipe = data.get('total_pipe', [])
+
+        if weeks and nb_projects:
+            x = range(len(weeks))
+
+            # Axe 1 : Nb projets (barres bleues)
+            ax1.bar(x, nb_projects, color=canvas.color1, alpha=0.6, label='Nb Projets Actifs')
+            ax1.set_ylabel('Nb Projets', color=canvas.color1, fontsize=9)
+            ax1.tick_params(axis='y', labelcolor=canvas.color1)
+            ax1.set_xticks(x)
+            ax1.set_xticklabels(weeks, rotation=45, ha='right', fontsize=8)
+
+            # Axe 2 : PIPE (ligne orange)
+            ax2 = ax1.twinx()
+            ax2.plot(x, total_pipe, color=canvas.color2, marker='o', linewidth=2.5,
+                    markersize=5, label='PIPE (jours)')
+            ax2.set_ylabel('PIPE (jours)', color=canvas.color2, fontsize=9)
+            ax2.tick_params(axis='y', labelcolor=canvas.color2)
+
+            # Afficher les valeurs du PIPE
+            for i, val in enumerate(total_pipe):
+                ax2.text(i, val + max(total_pipe)*0.02, f'{val:.0f}',
+                        ha='center', va='bottom', fontsize=7, color=canvas.color2, fontweight='bold')
+
+            # Légendes combinées
+            lines1, labels1 = ax1.get_legend_handles_labels()
+            lines2, labels2 = ax2.get_legend_handles_labels()
+            ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=8)
+
+            ax1.grid(axis='y', alpha=0.3)
+        else:
+            ax1.text(0.5, 0.5, 'Aucune donnée', ha='center', va='center', transform=ax1.transAxes)
+
+        ax1.set_facecolor('#f8faff')
+        fig.tight_layout()
+        canvas.draw()
 
     def _update_kpis(self, stats: List[Dict[str, Any]]):
         """Met à jour les KPIs globaux."""

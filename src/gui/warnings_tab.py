@@ -82,7 +82,7 @@ class WarningsTab(QWidget):
         widget.setLayout(layout)
         return widget
 
-    def _create_compact_tile(self, title: str, value: str, color: str = "#2196F3") -> QFrame:
+    def _create_compact_tile(self, title: str, value: str, color: str = "#0166FE") -> QFrame:
         """Crée une tuile compacte."""
         tile = QFrame()
         tile.setFrameShape(QFrame.Shape.StyledPanel)
@@ -121,7 +121,7 @@ class WarningsTab(QWidget):
         group = QGroupBox("RESUME")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
+                background-color: #f8faff;
                 border: 2px solid black;
                 border-radius: 5px;
                 margin-top: 10px;
@@ -143,7 +143,7 @@ class WarningsTab(QWidget):
         self.tile_internal = self._create_compact_tile("Warning Interne", "0", "#FF5722")
         layout.addWidget(self.tile_internal)
 
-        self.tile_both = self._create_compact_tile("Les deux", "0", "#9C27B0")
+        self.tile_both = self._create_compact_tile("Les deux", "0", "#FE4502")
         layout.addWidget(self.tile_both)
 
         self.tile_dlic_overdue = self._create_compact_tile("DLIC Dépassées", "0", "#D32F2F")
@@ -162,7 +162,7 @@ class WarningsTab(QWidget):
         group = QGroupBox("DETAILS DES WARNINGS")
         group.setStyleSheet("""
             QGroupBox {
-                background-color: #f5f5f5;
+                background-color: #f8faff;
                 border: 2px solid black;
                 border-radius: 5px;
                 margin-top: 10px;

@@ -178,7 +178,7 @@ class KPITab(QWidget):
             QGroupBox {
                 font-weight: bold;
                 font-size: 13px;
-                border: 2px solid #4CAF50;
+                border: 2px solid #0A1563;
                 border-radius: 8px;
                 margin-top: 12px;
                 padding-top: 8px;
@@ -204,7 +204,7 @@ class KPITab(QWidget):
             "Taux de Maîtrise",
             "0%",
             "Projets sans warning",
-            "#4CAF50"
+            "#0A1563"
         )
         row1_layout.addWidget(self.kpi_maitrise)
 
@@ -324,10 +324,10 @@ class KPITab(QWidget):
         self.kpi_taux_regie = KPICard("Taux Régie", "-%", "vs Build", "#FF9800")
         row1_layout.addWidget(self.kpi_taux_regie)
 
-        self.kpi_pipeline = KPICard("Pipeline Pondéré", "-€", "CA pondéré", "#4CAF50")
+        self.kpi_pipeline = KPICard("Pipeline Pondéré", "-€", "CA pondéré", "#0A1563")
         row1_layout.addWidget(self.kpi_pipeline)
 
-        self.kpi_taux_real = KPICard("Réalisation", "-%", "Réalisé/Prévu", "#2196F3")
+        self.kpi_taux_real = KPICard("Réalisation", "-%", "Réalisé/Prévu", "#0166FE")
         row1_layout.addWidget(self.kpi_taux_real)
 
         row1_layout.addStretch()
@@ -337,10 +337,10 @@ class KPITab(QWidget):
         row2_layout = QHBoxLayout()
         row2_layout.setSpacing(15)
 
-        self.kpi_tjm = KPICard("TJM Moyen", "-€", "Taux journalier", "#9C27B0")
+        self.kpi_tjm = KPICard("TJM Moyen", "-€", "Taux journalier", "#FE4502")
         row2_layout.addWidget(self.kpi_tjm)
 
-        self.kpi_signed = KPICard("Signés", "0", "100%", "#4CAF50")
+        self.kpi_signed = KPICard("Signés", "0", "100%", "#0A1563")
         row2_layout.addWidget(self.kpi_signed)
 
         self.kpi_agreed = KPICard("Agreed", "0", "80%", "#8BC34A")
@@ -540,7 +540,7 @@ class KPITab(QWidget):
         week_labels = [f"S{w}" for w in weeks]
 
         # Barres avec couleur selon le taux
-        colors = ['#4CAF50' if t >= 80 else '#FFC107' if t >= 60 else '#f44336' for t in taux_maitrise]
+        colors = ['#0A1563' if t >= 80 else '#FFC107' if t >= 60 else '#f44336' for t in taux_maitrise]
         bars = ax.bar(x, taux_maitrise, color=colors, alpha=0.8)
 
         # Ligne de tendance
@@ -551,7 +551,7 @@ class KPITab(QWidget):
         ax.set_xticks(x)
         ax.set_xticklabels(week_labels, rotation=45, ha='right', fontsize=8)
         ax.set_ylim(0, 105)
-        ax.axhline(y=80, color='#4CAF50', linestyle='--', alpha=0.5, label='Objectif 80%')
+        ax.axhline(y=80, color='#0A1563', linestyle='--', alpha=0.5, label='Objectif 80%')
         ax.grid(axis='y', alpha=0.3)
         ax.set_facecolor('#f8f9fa')
 

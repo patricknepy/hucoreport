@@ -119,7 +119,7 @@ class MainWindow(QMainWindow):
         title_font.setPointSize(14)
         title_font.setBold(True)
         title_label.setFont(title_font)
-        title_label.setStyleSheet("color: #2196F3; margin-left: 10px;")
+        title_label.setStyleSheet("color: #0166FE; margin-left: 10px;")
 
         header_layout.addWidget(title_label)
         header_layout.addStretch()
@@ -131,7 +131,7 @@ class MainWindow(QMainWindow):
         import_widget = QWidget()
         import_widget.setStyleSheet("""
             QWidget {
-                background-color: #f5f5f5;
+                background-color: #f8faff;
                 border: 1px solid #ddd;
                 border-radius: 5px;
             }
@@ -326,13 +326,13 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Prêt - En attente d'un fichier Excel")
 
     def apply_stylesheet(self):
-        """Applique le style CSS à l'application"""
+        """Applique le style CSS à l'application (charte HuCo)"""
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #ffffff;
             }
             QPushButton {
-                background-color: #4CAF50;
+                background-color: #0166FE;
                 color: white;
                 border: none;
                 border-radius: 5px;
@@ -341,32 +341,34 @@ class MainWindow(QMainWindow):
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #45a049;
+                background-color: #0A1563;
             }
             QPushButton:pressed {
-                background-color: #3d8b40;
+                background-color: #FE4502;
             }
             QTabWidget::pane {
-                border: 1px solid #ddd;
+                border: 1px solid #0166FE;
                 border-radius: 5px;
                 background-color: white;
             }
             QTabBar::tab {
-                background-color: #f0f0f0;
+                background-color: #E8F0FC;
                 padding: 10px 20px;
                 margin-right: 2px;
                 border-top-left-radius: 5px;
                 border-top-right-radius: 5px;
+                color: #0A1563;
             }
             QTabBar::tab:selected {
-                background-color: #4CAF50;
+                background-color: #0166FE;
                 color: white;
             }
             QTabBar::tab:hover {
-                background-color: #e0e0e0;
+                background-color: #5A9CFF;
+                color: white;
             }
             QGroupBox {
-                background-color: #f5f5f5;
+                background-color: #f8faff;
                 border: none;
                 border-radius: 5px;
                 margin-top: 10px;
@@ -377,6 +379,7 @@ class MainWindow(QMainWindow):
                 subcontrol-origin: margin;
                 left: 10px;
                 padding: 0 5px;
+                color: #0A1563;
             }
         """)
 
